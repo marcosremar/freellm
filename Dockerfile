@@ -1,6 +1,6 @@
-FROM node:24-slim AS base
+FROM node:22-slim AS base
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
 # ── Install dependencies ──
@@ -11,7 +11,7 @@ COPY packages/api-server/package.json packages/api-server/
 COPY lib/api-client-react/package.json lib/api-client-react/ 2>/dev/null || true
 COPY lib/api-spec/package.json lib/api-spec/ 2>/dev/null || true
 
-RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # ── Build ──
 FROM deps AS build
@@ -24,6 +24,8 @@ RUN cd packages/api-server && pnpm run build
 # ── Production ──
 FROM base AS production
 
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
@@ -33,6 +35,8 @@ COPY --from=build /app/packages/api-server/dist ./packages/api-server/dist
 COPY --from=build /app/packages/api-server/package.json ./packages/api-server/
 
 WORKDIR /app/packages/api-server
+
+USER appuser
 
 EXPOSE 3000
 

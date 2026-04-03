@@ -2,20 +2,27 @@ import type { Request, Response, NextFunction } from "express";
 import { logger } from "../lib/logger.js";
 import { AllProvidersExhaustedError, ProviderClientError } from "../gateway/index.js";
 
-export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): void {
+/** Extract a safe error message from an upstream response without leaking internals. */
+async function safeUpstreamMessage(response: Response | globalThis.Response, fallback: string): Promise<string> {
+  try {
+    const body = await (response as globalThis.Response).json();
+    const msg = body?.error?.message;
+    return typeof msg === "string" ? msg : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): Promise<void> {
   if (res.headersSent) {
     return;
   }
 
   if (err instanceof ProviderClientError) {
-    err.upstreamResponse
-      .json()
-      .then((body) => res.status(err.statusCode).json(body))
-      .catch(() =>
-        res.status(err.statusCode).json({
-          error: { message: err.message, type: "provider_error" },
-        }),
-      );
+    const message = await safeUpstreamMessage(err.upstreamResponse, err.message);
+    res.status(err.statusCode).json({
+      error: { message, type: "provider_error" },
+    });
     return;
   }
 

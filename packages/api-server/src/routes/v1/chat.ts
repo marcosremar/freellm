@@ -112,10 +112,9 @@ async function handleStreamingRequest(
         streaming: true,
       });
       if (!res.headersSent) {
-        const payload = await err.upstreamResponse.json().catch(() => ({
+        res.status(err.statusCode).json({
           error: { message: err.message, type: "provider_error" },
-        }));
-        res.status(err.statusCode).json(payload);
+        });
       }
       return;
     }

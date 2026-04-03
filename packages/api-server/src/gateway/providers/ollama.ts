@@ -38,6 +38,7 @@ export class OllamaProvider extends BaseProvider {
     const mapped = this.mapRequest(request);
     this.stats.totalRequests++;
     this.stats.lastUsedAt = new Date().toISOString();
+    this.rateLimiter.recordRequest(this.id);
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
