@@ -79,11 +79,13 @@ export class ProviderRegistry {
     metaModel: string,
     excluded: Set<string>,
     strategy: RoutingStrategy = "round_robin",
+    rrIndex: number = 0,
+    advanceRrIndex?: (next: number) => void,
   ): ProviderAdapter | undefined {
     const available = this.getAvailable().filter((p) => !excluded.has(p.id));
     if (available.length === 0) return undefined;
 
-    // Build candidate list in priority order for this meta-model
+    // Build candidate list — priority order defines the round-robin sequence
     let candidates: ProviderAdapter[];
     if (metaModel === "free-fast") {
       const order = ["groq", "cerebras", "gemini", "mistral", "ollama"];
@@ -102,12 +104,14 @@ export class ProviderRegistry {
 
     if (candidates.length === 0) return undefined;
 
-    // round_robin: respect priority order (first candidate = highest-priority available)
-    // random: ignore priority, pick any available at random for load distribution
     if (strategy === "random") {
       return candidates[Math.floor(Math.random() * candidates.length)];
     }
-    return candidates[0];
+
+    // round_robin: pick from candidates using the caller-managed rotation index
+    const idx = rrIndex % candidates.length;
+    if (advanceRrIndex) advanceRrIndex(rrIndex + 1);
+    return candidates[idx];
   }
 
   getStatusAll(): ProviderStatusInfo[] {
