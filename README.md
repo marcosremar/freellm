@@ -57,9 +57,20 @@ Your request goes to the fastest available provider. If that provider is rate-li
 
 ## Quickstart
 
-Three steps. Under two minutes.
+### Option A: Docker (recommended)
 
-### 1. Clone and install
+```bash
+git clone https://github.com/devanshtiwari/freellm.git
+cd freellm
+cp .env.example .env        # add your API keys
+docker compose up
+```
+
+API runs on `http://localhost:3000`. Done.
+
+### Option B: Local
+
+#### 1. Clone and install
 
 ```bash
 git clone https://github.com/devanshtiwari/freellm.git
@@ -67,7 +78,7 @@ cd freellm
 pnpm install
 ```
 
-### 2. Add your API keys
+#### 2. Add your API keys
 
 ```bash
 cp .env.example .env
@@ -82,7 +93,7 @@ MISTRAL_API_KEY=...
 CEREBRAS_API_KEY=...
 ```
 
-### 3. Start
+#### 3. Start
 
 ```bash
 pnpm dev
@@ -90,7 +101,7 @@ pnpm dev
 
 API runs on `http://localhost:3000`. Dashboard on `http://localhost:5173`.
 
-That's it. Point any OpenAI-compatible SDK at `http://localhost:3000/v1` and go.
+Point any OpenAI-compatible SDK at `http://localhost:3000/v1` and go.
 
 ### Use with Python
 
