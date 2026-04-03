@@ -4,6 +4,8 @@ import type { ChatCompletionRequest, ChatCompletionResponse, RoutingStrategy } f
 import { RequestLog } from "./request-log.js";
 import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
 
+const ROUTE_TIMEOUT_MS = parseInt(process.env["ROUTE_TIMEOUT_MS"] ?? "30000", 10);
+
 export class GatewayRouter {
   // Round-robin index for explicit (non-meta) model requests
   private rrIndex = 0;
@@ -77,8 +79,16 @@ export class GatewayRouter {
     resolvedModel: string;
   }> {
     const excluded = new Set<string>();
+    const deadline = Date.now() + ROUTE_TIMEOUT_MS;
 
     while (true) {
+      if (Date.now() > deadline) {
+        throw new AllProvidersExhaustedError(
+          `Routing timeout (${ROUTE_TIMEOUT_MS}ms) exceeded for model: ${request.model}`,
+          [...excluded],
+        );
+      }
+
       const provider = this.pickProvider(request.model, excluded);
 
       if (!provider) {
@@ -102,7 +112,6 @@ export class GatewayRouter {
         }
 
         if (NON_RETRIABLE_STATUSES.has(response.status)) {
-          // Client-side / auth / model-not-found errors — surface directly
           throw new ProviderClientError(provider.id, response.status, response);
         }
 
@@ -113,7 +122,6 @@ export class GatewayRouter {
         }
 
         if (!response.ok) {
-          // Other 4xx we haven't explicitly classified — fail over
           provider.onError();
           excluded.add(provider.id);
           continue;
@@ -122,7 +130,7 @@ export class GatewayRouter {
         provider.onSuccess();
         return { response, provider, resolvedModel };
       } catch (err) {
-        if (err instanceof ProviderClientError) throw err; // propagate non-retriable errors
+        if (err instanceof ProviderClientError) throw err;
         provider.onError();
         excluded.add(provider.id);
       }

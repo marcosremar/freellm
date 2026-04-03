@@ -5,6 +5,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middleware/error-handler.js";
 import { auth } from "./middleware/auth.js";
+import { clientRateLimit } from "./middleware/rate-limit.js";
 
 const app: Express = express();
 
@@ -39,6 +40,9 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+// Per-client rate limiting (by IP)
+app.use(clientRateLimit);
 
 // API key auth: only enforced when FREELLM_API_KEY is set
 app.use(auth);

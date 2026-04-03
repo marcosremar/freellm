@@ -3,8 +3,13 @@ import { registry, router as gatewayRouter } from "../../gateway/index.js";
 import type { RoutingStrategy } from "../../gateway/types.js";
 import { validate } from "../../middleware/validate.js";
 import { updateRoutingSchema } from "../../gateway/schemas.js";
+import { adminAuth } from "../../middleware/admin-auth.js";
 
 const statusRouter: IRouter = Router();
+
+// Admin auth for mutation endpoints (reset, routing strategy changes)
+statusRouter.post("/providers/:providerId/reset", adminAuth);
+statusRouter.patch("/routing", adminAuth);
 
 statusRouter.get("/", (_req, res) => {
   const stats = gatewayRouter.requestLog.getStats();
