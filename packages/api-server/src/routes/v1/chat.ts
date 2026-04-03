@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type IRouter } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { router as gatewayRouter, AllProvidersExhaustedError, ProviderClientError } from "../../gateway/index.js";
 import { logger } from "../../lib/logger.js";
@@ -6,7 +6,7 @@ import type { ChatCompletionRequest } from "../../gateway/types.js";
 import { validate } from "../../middleware/validate.js";
 import { chatCompletionRequestSchema } from "../../gateway/schemas.js";
 
-const chatRouter = Router();
+const chatRouter: IRouter = Router();
 
 chatRouter.post("/completions", validate(chatCompletionRequestSchema), async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body as ChatCompletionRequest;
