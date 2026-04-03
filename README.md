@@ -2,6 +2,12 @@
 
 # FreeLLM
 
+![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
+![Node](https://img.shields.io/badge/Node.js-24+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Providers](https://img.shields.io/badge/Providers-5-blueviolet?style=flat-square)
+![Models](https://img.shields.io/badge/Models-20+-orange?style=flat-square)
+
 ### Stop juggling API keys. Start shipping.
 
 One endpoint, 5 providers, 20+ models -- all free.
@@ -237,17 +243,17 @@ lib/
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Monorepo | pnpm workspaces |
-| Language | TypeScript 5.9 |
-| API | Express 5 |
-| Validation | Zod |
-| Frontend | React 18 + Vite |
-| UI | Radix UI + Tailwind CSS |
-| State | TanStack Query |
-| Logging | Pino |
-| API Codegen | Orval |
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Radix UI](https://img.shields.io/badge/Radix_UI-161618?style=for-the-badge&logo=radixui&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
+![React Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-6BA539?style=for-the-badge&logo=openapiinitiative&logoColor=white)
+![Pino](https://img.shields.io/badge/Pino-687634?style=for-the-badge&logoColor=white)
 
 ## Contributing
 
