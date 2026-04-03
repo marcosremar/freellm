@@ -3,14 +3,19 @@ import type { CircuitBreakerState } from "./types.js";
 interface CircuitBreakerConfig {
   failureThreshold: number;
   successThreshold: number;
-  timeout: number;
+  timeout: number; // ms before half-open retry
 }
 
-const DEFAULT_CONFIG: CircuitBreakerConfig = {
-  failureThreshold: 3,
-  successThreshold: 2,
-  timeout: 30_000,
-};
+function loadConfig(): CircuitBreakerConfig {
+  const failureThreshold = parseInt(process.env["CB_FAILURE_THRESHOLD"] ?? "3", 10);
+  const successThreshold = parseInt(process.env["CB_SUCCESS_THRESHOLD"] ?? "2", 10);
+  const timeout = parseInt(process.env["CB_TIMEOUT_MS"] ?? "30000", 10);
+  return {
+    failureThreshold: isNaN(failureThreshold) ? 3 : failureThreshold,
+    successThreshold: isNaN(successThreshold) ? 2 : successThreshold,
+    timeout: isNaN(timeout) ? 30_000 : timeout,
+  };
+}
 
 export class CircuitBreaker {
   private state: CircuitBreakerState = "closed";
@@ -19,8 +24,9 @@ export class CircuitBreaker {
   private nextAttemptAt: number | null = null;
   private config: CircuitBreakerConfig;
 
-  constructor(config: Partial<CircuitBreakerConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+  constructor(config?: Partial<CircuitBreakerConfig>) {
+    const env = loadConfig();
+    this.config = { ...env, ...config };
   }
 
   getState(): CircuitBreakerState {
