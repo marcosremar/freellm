@@ -2,21 +2,7 @@ import type { ProviderRegistry } from "./registry.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ChatCompletionRequest, ChatCompletionResponse, RoutingStrategy } from "./types.js";
 import { RequestLog } from "./request-log.js";
-
-const META_MODELS = new Set(["free", "free-fast", "free-smart"]);
-
-const DEFAULT_MODELS: Record<string, string> = {
-  "groq": "llama-3.3-70b-versatile",
-  "gemini": "gemini-2.0-flash",
-  "mistral": "mistral-small-latest",
-  "cerebras": "llama3.3-70b",
-  "ollama": "llama3",
-};
-
-// 4xx status codes that indicate a client-side or configuration error.
-// These should NOT trigger failover to another provider — failing over would
-// just repeat the same error on a different endpoint.
-const NON_RETRIABLE_STATUSES = new Set([400, 401, 403, 404]);
+import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
 
 export class GatewayRouter {
   // Round-robin index for explicit (non-meta) model requests

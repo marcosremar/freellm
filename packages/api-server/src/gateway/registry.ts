@@ -5,6 +5,7 @@ import { CerebrasProvider } from "./providers/cerebras.js";
 import { OllamaProvider } from "./providers/ollama.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy } from "./types.js";
+import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
 
 export class ProviderRegistry {
   private providers: ProviderAdapter[];
@@ -88,13 +89,11 @@ export class ProviderRegistry {
     // Build candidate list — priority order defines the round-robin sequence
     let candidates: ProviderAdapter[];
     if (metaModel === "free-fast") {
-      const order = ["groq", "cerebras", "gemini", "mistral", "ollama"];
-      candidates = order
+      candidates = [...FAST_PRIORITY]
         .map((id) => available.find((a) => a.id === id))
         .filter((p): p is ProviderAdapter => p !== undefined);
     } else if (metaModel === "free-smart") {
-      const order = ["gemini", "groq", "mistral", "cerebras", "ollama"];
-      candidates = order
+      candidates = [...SMART_PRIORITY]
         .map((id) => available.find((a) => a.id === id))
         .filter((p): p is ProviderAdapter => p !== undefined);
     } else {
