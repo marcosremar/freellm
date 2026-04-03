@@ -50,13 +50,13 @@ export default function Models() {
     ? allModels.filter(
         (m) =>
           m.id.toLowerCase().includes(search.toLowerCase()) ||
-          m.owned_by.toLowerCase().includes(search.toLowerCase())
+          m.provider.toLowerCase().includes(search.toLowerCase())
       )
     : allModels;
 
-  // Group by provider
+  // Group by gateway provider (not model creator/owned_by)
   const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, m) => {
-    const p = m.owned_by ?? "unknown";
+    const p = m.provider ?? "unknown";
     if (!acc[p]) acc[p] = [];
     acc[p].push(m);
     return acc;
