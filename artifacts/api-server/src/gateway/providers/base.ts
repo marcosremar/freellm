@@ -52,6 +52,8 @@ export abstract class BaseProvider implements ProviderAdapter {
 
     this.stats.totalRequests++;
     this.stats.lastUsedAt = new Date().toISOString();
+    // Record in sliding window BEFORE the request so it contributes to quota tracking
+    this.rateLimiter.recordRequest(this.id);
 
     const mapped = this.mapRequest(request);
 

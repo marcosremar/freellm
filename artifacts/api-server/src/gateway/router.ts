@@ -29,7 +29,7 @@ export class GatewayRouter {
     const isMeta = META_MODELS.has(modelId);
 
     if (isMeta) {
-      return this.registry.getProviderForMetaModel(modelId, excluded);
+      return this.registry.getProviderForMetaModel(modelId, excluded, this.strategy);
     }
 
     const available = this.registry
