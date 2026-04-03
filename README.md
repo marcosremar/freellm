@@ -163,35 +163,95 @@ mistral/mistral-small-latest
 cerebras/llama3.3-70b
 ```
 
-### Routing and Failover
+### Request Lifecycle
 
-Every request follows this path:
+The complete journey of a request through the gateway:
 
+```mermaid
+flowchart TB
+    Client([Client / OpenAI SDK]) -->|HTTP Request| CORS[CORS Filter]
+    CORS --> RL[Per-Client Rate Limiter]
+    RL -->|Exceeded| R429_1[429 Rate Limited]
+    RL -->|OK| Auth[API Key Auth]
+    Auth -->|Invalid| R401[401 Unauthorized]
+    Auth -->|Valid / No key set| Router[Express Router]
+    
+    Router -->|/healthz| Health[200 OK]
+    Router -->|/v1/models| Models[List Models]
+    Router -->|/v1/status| Status[Gateway Status]
+    Router -->|/v1/chat/completions| Validate[Zod Validation]
+    
+    Validate -->|Invalid| R400[400 Bad Request]
+    Validate -->|Valid| Stream{stream?}
+    
+    Stream -->|false| GW[Gateway Router]
+    Stream -->|true| GWS[Gateway Router]
+    
+    GW --> Pick
+    GWS --> Pick
+
+    subgraph Gateway["Gateway Failover Loop"]
+        Pick[Pick Provider] --> CB{Circuit Breaker}
+        CB -->|Open| Exclude[Exclude Provider]
+        CB -->|Closed / Half-Open| RateCheck{Rate Limited?}
+        RateCheck -->|Yes| Exclude
+        RateCheck -->|No| Send[Send to Provider]
+        Send -->|200 OK| Success[Mark Healthy]
+        Send -->|429| OnRL[Mark Rate Limited]
+        OnRL --> Exclude
+        Send -->|5xx| OnErr[Trip Breaker]
+        OnErr --> Exclude
+        Send -->|4xx| ClientErr[Return Error]
+        Exclude --> More{More Providers?}
+        More -->|Yes| Pick
+        More -->|No| Exhausted[All Exhausted]
+    end
+    
+    Success -->|Non-streaming| JSON[JSON Response]
+    Success -->|Streaming| SSE[SSE Stream]
+    Exhausted --> R429_2[429 All Providers Exhausted]
+    ClientErr --> R4xx[4xx Provider Error]
+    
+    JSON --> Client
+    SSE --> Client
 ```
-Your request
-  │
-  ├─ Pick provider (round-robin or random)
-  │
-  ├─ 200 ── Return response. Mark provider healthy.
-  │
-  ├─ 429 ── Provider rate-limited. Try the next one.
-  │
-  ├─ 5xx ── Provider error. Trip circuit breaker. Try the next one.
-  │
-  ├─ 400/401/403/404 ── Your request has a problem. Return the error. Don't retry.
-  │
-  └─ All providers exhausted ── Return 429 with "all_providers_exhausted".
-```
 
-### Circuit Breakers
+### Circuit Breaker States
 
 Each provider has an independent circuit breaker that protects against cascading failures:
 
+```mermaid
+stateDiagram-v2
+    [*] --> Closed
+    
+    Closed --> Open : 3 consecutive failures
+    Open --> HalfOpen : 30s timeout expires
+    HalfOpen --> Closed : 2 successes
+    HalfOpen --> Open : Any failure
+    
+    Closed --> Closed : Success (reset counter)
+    Open --> Open : Requests blocked
+
+    state Closed {
+        [*] : Requests flow normally
+    }
+    state Open {
+        [*] : All requests rejected
+    }
+    state HalfOpen {
+        [*] : Testing with limited requests
+    }
 ```
-CLOSED (healthy)                OPEN (failing)               HALF-OPEN (testing)
-  Requests flow normally   →   3 failures trip it open   →   After 30s, one request gets through
-        ↑                                                           │
-        └──────────── 2 successes in half-open = fully recovered ───┘
+
+### Routing and Failover
+
+```mermaid
+flowchart LR
+    subgraph Meta-Models
+        Free[free] -->|Round-robin| All[All Providers]
+        Fast[free-fast] -->|Priority| FastOrder[Groq → Cerebras → Gemini → Mistral → Ollama]
+        Smart[free-smart] -->|Priority| SmartOrder[Gemini → Groq → Mistral → Cerebras → Ollama]
+    end
 ```
 
 All thresholds are configurable:
@@ -252,29 +312,85 @@ A built-in web UI for monitoring your gateway in real time:
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph Client Layer
+        SDK([OpenAI SDK / curl])
+        Dashboard([Dashboard SPA])
+    end
+
+    subgraph API Server ["API Server (Express 5)"]
+        direction TB
+        MW["Middleware Stack<br/>CORS → Rate Limit → Auth → Body Parser"]
+        
+        subgraph Routes
+            Health["/healthz"]
+            Chat["/v1/chat/completions"]
+            ModelsRoute["/v1/models"]
+            StatusRoute["/v1/status"]
+        end
+        
+        subgraph Gateway
+            GWRouter["Gateway Router<br/>Failover + Strategy"]
+            Registry["Provider Registry"]
+            CB["Circuit Breakers<br/>(per provider)"]
+            RateLim["Rate Limiters<br/>(per provider)"]
+            ReqLog["Request Log<br/>(in-memory, 500 max)"]
+        end
+        
+        ErrHandler["Error Handler"]
+    end
+
+    subgraph Providers ["LLM Providers"]
+        Groq([Groq])
+        Gemini([Gemini])
+        Mistral([Mistral])
+        Cerebras([Cerebras])
+        Ollama([Ollama])
+    end
+
+    SDK --> MW
+    Dashboard --> MW
+    MW --> Routes
+    Chat --> GWRouter
+    GWRouter --> Registry
+    Registry --> CB
+    Registry --> RateLim
+    GWRouter --> Providers
+    GWRouter --> ReqLog
+    GWRouter --> ErrHandler
+    StatusRoute --> ReqLog
+    StatusRoute --> Registry
+```
+
+### Project Structure
+
 ```
 packages/
   api-server/              Express 5 + TypeScript
     gateway/
-      config.ts              All constants in one place (meta-models, priorities, limits)
-      router.ts              Failover loop with round-robin and random strategies
+      config.ts              Constants (meta-models, priorities, limits)
+      router.ts              Failover loop with round-robin/random
       registry.ts            Provider lifecycle management
-      circuit-breaker.ts     Three-state health tracking per provider
-      rate-limiter.ts        Sliding-window request counting + cooldown
-      schemas.ts             Zod request validation schemas
+      circuit-breaker.ts     Three-state health tracking
+      rate-limiter.ts        Sliding-window + cooldown
+      schemas.ts             Zod validation schemas
       providers/             One adapter per provider
     middleware/
+      auth.ts                API key auth (timing-safe)
+      admin-auth.ts          Admin-only route protection
+      rate-limit.ts          Per-client IP rate limiting
       error-handler.ts       Centralized error formatting
       validate.ts            Zod validation middleware
     routes/v1/               OpenAI-compatible HTTP handlers
 
   dashboard/               React 18 + Vite + Tailwind
-    components/              Focused, single-responsibility UI components
+    components/              Focused, single-responsibility UI
     pages/                   Dashboard, Models, Quickstart
 
 lib/
-  api-spec/                OpenAPI 3.1 spec (single source of truth)
-  api-client-react/        Auto-generated React Query hooks via Orval
+  api-spec/                OpenAPI 3.1 spec (source of truth)
+  api-client-react/        Auto-generated React Query hooks
 ```
 
 ## Tech Stack
