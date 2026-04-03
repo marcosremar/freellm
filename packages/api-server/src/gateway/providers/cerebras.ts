@@ -17,12 +17,5 @@ export class CerebrasProvider extends BaseProvider {
     return process.env["CEREBRAS_API_KEY"];
   }
 
-  protected getModelMap(): Record<string, string> {
-    return {
-      "cerebras/llama3.1-8b": "llama3.1-8b",
-      "cerebras/llama3.1-70b": "llama3.1-70b",
-      "cerebras/llama3.3-70b": "llama3.3-70b",
-      "cerebras/qwen-3-32b": "qwen-3-32b",
-    };
-  }
+
 }

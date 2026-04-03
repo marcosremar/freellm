@@ -1,6 +1,5 @@
 import { BaseProvider } from "./base.js";
-import type { ModelObject } from "../types.js";
-import type { ChatCompletionRequest } from "../types.js";
+import type { ModelObject, ChatCompletionRequest } from "../types.js";
 
 export class OllamaProvider extends BaseProvider {
   readonly id = "ollama";
@@ -33,14 +32,6 @@ export class OllamaProvider extends BaseProvider {
 
   isEnabled(): boolean {
     return !!process.env["OLLAMA_BASE_URL"];
-  }
-
-  protected mapRequest(request: ChatCompletionRequest): ChatCompletionRequest {
-    const mapped = { ...request };
-    if (mapped.model.startsWith("ollama/")) {
-      mapped.model = mapped.model.slice("ollama/".length);
-    }
-    return mapped;
   }
 
   async complete(request: ChatCompletionRequest): Promise<Response> {

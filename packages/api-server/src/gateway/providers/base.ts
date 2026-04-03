@@ -72,15 +72,11 @@ export abstract class BaseProvider implements ProviderAdapter {
 
   protected mapRequest(request: ChatCompletionRequest): ChatCompletionRequest {
     const mapped = { ...request };
-    const modelMap = this.getModelMap();
-    if (modelMap[request.model]) {
-      mapped.model = modelMap[request.model]!;
+    const prefix = `${this.id}/`;
+    if (mapped.model.startsWith(prefix)) {
+      mapped.model = mapped.model.slice(prefix.length);
     }
     return mapped;
-  }
-
-  protected getModelMap(): Record<string, string> {
-    return {};
   }
 
   protected extraHeaders(): Record<string, string> {

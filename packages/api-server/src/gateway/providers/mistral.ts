@@ -17,12 +17,5 @@ export class MistralProvider extends BaseProvider {
     return process.env["MISTRAL_API_KEY"];
   }
 
-  protected getModelMap(): Record<string, string> {
-    return {
-      "mistral/mistral-small-latest": "mistral-small-latest",
-      "mistral/open-mistral-7b": "open-mistral-7b",
-      "mistral/open-mixtral-8x7b": "open-mixtral-8x7b",
-      "mistral/mistral-nemo": "mistral-nemo",
-    };
-  }
+
 }
