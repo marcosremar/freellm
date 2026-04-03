@@ -2,38 +2,58 @@
 
 # FreeLLM
 
-**One endpoint. Every free LLM.**
+### Stop juggling API keys. Start shipping.
 
-An OpenAI-compatible gateway that aggregates free-tier AI providers into a single, reliable API with automatic failover, rate-limit awareness, and a real-time dashboard.
+One endpoint, 5 providers, 20+ models -- all free.
+FreeLLM is an OpenAI-compatible gateway that routes your requests across
+Groq, Gemini, Mistral, Cerebras, and Ollama so you never hit a rate limit again.
 
-[Quickstart](#quickstart) &bull; [API Reference](#api-reference) &bull; [Dashboard](#dashboard) &bull; [Architecture](#architecture)
+[Quickstart](#quickstart) · [How It Works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard) · [Architecture](#architecture)
 
 ---
 
 </div>
 
-## Why FreeLLM?
+## The Problem
 
-Every major LLM provider offers a free tier -- but each one has tight rate limits, different SDKs, and occasional downtime. FreeLLM sits in front of all of them and gives you:
+You want to use LLMs in your project without paying. Every major provider has a free tier -- but each comes with its own SDK, its own rate limits, and its own downtime. You end up writing provider-switching logic, handling 429s, and babysitting API keys across five different dashboards.
 
-- **A single OpenAI-compatible endpoint** -- drop it into any app that speaks OpenAI
-- **Automatic failover** -- if Groq is rate-limited, the request silently routes to Gemini, Mistral, or others
-- **Smart routing** -- choose `free-fast` for speed or `free-smart` for capability
-- **Zero cost** -- every provider used is on its free tier
+**FreeLLM fixes this in one line:**
+
+```bash
+curl http://localhost:3000/v1/chat/completions \
+  -d '{"model": "free-fast", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
+Your request goes to the fastest available provider. If that provider is rate-limited or down, FreeLLM tries the next one. You get a response. Every time.
+
+## What You Get
+
+- **One endpoint, any OpenAI SDK** -- swap your base URL, keep your existing code
+- **Automatic failover** -- Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
+- **Smart meta-models** -- `free-fast` for speed, `free-smart` for capability, `free` for maximum availability
+- **Built-in rate-limit tracking** -- FreeLLM knows each provider's limits and avoids hitting them
+- **Circuit breakers** -- failing providers get taken out of rotation and tested for recovery automatically
+- **Real-time dashboard** -- see provider health, request logs, and latency at a glance
+- **Zero cost** -- every provider runs on its free tier
 
 ## Supported Providers
 
-| Provider | Models | Free RPM | Strengths |
-|----------|--------|----------|-----------|
-| **Groq** | Llama 3.3 70B, Llama 3.1 8B, Gemma2, Mixtral | ~30 | Ultra-low latency |
-| **Gemini** | Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro | ~15 | High capability |
-| **Mistral** | Mistral Small | ~5 | Strong reasoning |
-| **Cerebras** | Llama 3.3 70B | ~30 | Fast inference |
-| **Ollama** | Any local model | Unlimited | Privacy, no rate limits |
+| Provider | Models | Free Tier | Why It's Here |
+|----------|--------|-----------|---------------|
+| **Groq** | Llama 3.3 70B, Llama 3.1 8B, Gemma2, Mixtral | ~30 req/min | Fastest inference available |
+| **Gemini** | Gemini 2.0 Flash, 1.5 Flash, 1.5 Pro | ~15 req/min | Most capable free models |
+| **Mistral** | Mistral Small | ~5 req/min | Strong reasoning at low cost |
+| **Cerebras** | Llama 3.3 70B | ~30 req/min | High-throughput inference |
+| **Ollama** | Any local model | Unlimited | Your hardware, your rules |
+
+**Combined free capacity: ~80 requests/minute** across all cloud providers -- enough for prototyping, internal tools, and side projects.
 
 ## Quickstart
 
-### 1. Clone & install
+Three steps. Under two minutes.
+
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/devanshtiwari/freellm.git
@@ -41,13 +61,13 @@ cd freellm
 pnpm install
 ```
 
-### 2. Configure API keys
+### 2. Add your API keys
 
 ```bash
 cp .env.example .env
 ```
 
-Add at least one provider key. More keys = better availability:
+Open `.env` and paste at least one key. More keys = more availability:
 
 ```env
 GROQ_API_KEY=gsk_...
@@ -56,26 +76,17 @@ MISTRAL_API_KEY=...
 CEREBRAS_API_KEY=...
 ```
 
-### 3. Start the server
+### 3. Start
 
 ```bash
 pnpm dev
 ```
 
-The API starts on `http://localhost:3000` and the dashboard on `http://localhost:5173`.
+API runs on `http://localhost:3000`. Dashboard on `http://localhost:5173`.
 
-### 4. Make a request
+That's it. Point any OpenAI-compatible SDK at `http://localhost:3000/v1` and go.
 
-```bash
-curl http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "free-fast",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-```
-
-Or use any OpenAI-compatible SDK:
+### Use with Python
 
 ```python
 from openai import OpenAI
@@ -90,6 +101,8 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
+### Use with TypeScript
+
 ```typescript
 import OpenAI from "openai";
 
@@ -101,121 +114,126 @@ const response = await client.chat.completions.create({
 });
 ```
 
-## Meta-Models
+### Use with curl
 
-Instead of picking a specific provider, use a meta-model and let FreeLLM route for you:
+```bash
+curl http://localhost:3000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "free",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
 
-| Model | Behavior | Best For |
-|-------|----------|----------|
-| `free` | Round-robin across all available providers | General use, maximum availability |
-| `free-fast` | Prioritizes low-latency providers (Groq > Cerebras > Gemini) | Chatbots, real-time apps |
-| `free-smart` | Prioritizes capable models (Gemini > Groq > Mistral) | Complex reasoning, analysis |
+## How It Works
 
-You can also target a specific provider model directly:
+### Meta-Models
+
+Don't pick a provider. Pick a strategy:
+
+| Model | What It Does | Use When |
+|-------|-------------|----------|
+| `free` | Rotates across all available providers evenly | You want maximum uptime |
+| `free-fast` | Routes to the lowest-latency provider first (Groq > Cerebras > Gemini) | You're building a chatbot or real-time UI |
+| `free-smart` | Routes to the most capable model first (Gemini > Groq > Mistral) | You need stronger reasoning or longer context |
+
+Need a specific model? Target it directly:
 
 ```
 groq/llama-3.3-70b-versatile
 gemini/gemini-2.0-flash
 mistral/mistral-small-latest
+cerebras/llama3.3-70b
 ```
+
+### Routing and Failover
+
+Every request follows this path:
+
+```
+Your request
+  │
+  ├─ Pick provider (round-robin or random)
+  │
+  ├─ 200 ── Return response. Mark provider healthy.
+  │
+  ├─ 429 ── Provider rate-limited. Try the next one.
+  │
+  ├─ 5xx ── Provider error. Trip circuit breaker. Try the next one.
+  │
+  ├─ 400/401/403/404 ── Your request has a problem. Return the error. Don't retry.
+  │
+  └─ All providers exhausted ── Return 429 with "all_providers_exhausted".
+```
+
+### Circuit Breakers
+
+Each provider has an independent circuit breaker that protects against cascading failures:
+
+```
+CLOSED (healthy)                OPEN (failing)               HALF-OPEN (testing)
+  Requests flow normally   →   3 failures trip it open   →   After 30s, one request gets through
+        ↑                                                           │
+        └──────────── 2 successes in half-open = fully recovered ───┘
+```
+
+All thresholds are configurable:
+
+| Variable | Default | What It Controls |
+|----------|---------|-----------------|
+| `CB_FAILURE_THRESHOLD` | `3` | Consecutive failures before tripping open |
+| `CB_SUCCESS_THRESHOLD` | `2` | Successes needed in half-open to recover |
+| `CB_TIMEOUT_MS` | `30000` | Wait time before testing an open breaker |
 
 ## API Reference
 
-FreeLLM exposes an OpenAI-compatible API. All endpoints are available at both `/v1/...` (direct) and `/api/v1/...` (dashboard proxy).
+Fully OpenAI-compatible. Available at `/v1/...` (direct) and `/api/v1/...` (proxied via dashboard).
 
-### Chat Completions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/v1/chat/completions` | Chat completion (streaming and non-streaming) |
+| `GET` | `/v1/models` | List all available models + meta-models |
+| `GET` | `/v1/status` | Gateway health, provider states, recent requests |
+| `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
+| `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` |
 
-```
-POST /v1/chat/completions
-```
-
-Supports both streaming (`"stream": true`) and non-streaming responses. The response includes an `x_freellm_provider` field indicating which provider handled the request.
-
-### List Models
-
-```
-GET /v1/models
-```
-
-Returns all available models across configured providers, plus the three meta-models.
-
-### Gateway Status
-
-```
-GET  /v1/status                              # Full gateway status & metrics
-POST /v1/status/providers/{id}/reset         # Reset a provider's circuit breaker
-PATCH /v1/status/routing                     # Switch routing strategy
-```
+Every response includes an `x_freellm_provider` header so you know which provider handled it.
 
 ## Dashboard
 
-The built-in dashboard provides real-time visibility into gateway health:
+A built-in web UI for monitoring your gateway in real time:
 
-- **Provider health cards** -- circuit breaker state, success/failure counts, last error
-- **Request log** -- recent requests with latency, status, and provider used
-- **Routing control** -- toggle between round-robin and random strategies
-- **Circuit breaker reset** -- manually recover a tripped provider
+- **Provider health** -- see which providers are healthy, rate-limited, or failing
+- **Live request log** -- every request with its model, provider, latency, and status
+- **Routing controls** -- switch strategies without restarting the server
+- **Circuit breaker management** -- manually reset a tripped provider when you know it's back
 
 ## Architecture
 
 ```
 packages/
-  api-server/          Express 5 + TypeScript API
-    src/
-      gateway/
-        config.ts        Meta-models, priorities, defaults (single source of truth)
-        router.ts        Failover loop with round-robin/random strategies
-        registry.ts      Provider management
-        circuit-breaker.ts   Per-provider health (closed/open/half-open)
-        rate-limiter.ts      Sliding window + cooldown tracking
-        providers/       One adapter per provider (Groq, Gemini, Mistral, Cerebras, Ollama)
-      middleware/
-        error-handler.ts   Centralized Express error handling
-        validate.ts        Zod schema validation middleware
-      routes/
-        v1/              OpenAI-compatible endpoints
+  api-server/              Express 5 + TypeScript
+    gateway/
+      config.ts              All constants in one place (meta-models, priorities, limits)
+      router.ts              Failover loop with round-robin and random strategies
+      registry.ts            Provider lifecycle management
+      circuit-breaker.ts     Three-state health tracking per provider
+      rate-limiter.ts        Sliding-window request counting + cooldown
+      schemas.ts             Zod request validation schemas
+      providers/             One adapter per provider
+    middleware/
+      error-handler.ts       Centralized error formatting
+      validate.ts            Zod validation middleware
+    routes/v1/               OpenAI-compatible HTTP handlers
 
-  dashboard/           React + Vite + Tailwind SPA
-    src/
-      components/      Extracted, focused UI components
-      pages/           Dashboard, Models, Quickstart
+  dashboard/               React 18 + Vite + Tailwind
+    components/              Focused, single-responsibility UI components
+    pages/                   Dashboard, Models, Quickstart
 
 lib/
-  api-spec/            OpenAPI 3.1 specification (source of truth)
-  api-client-react/    Auto-generated React hooks (via Orval)
+  api-spec/                OpenAPI 3.1 spec (single source of truth)
+  api-client-react/        Auto-generated React Query hooks via Orval
 ```
-
-### How Routing Works
-
-```
-Request ──> Pick provider (round-robin / random)
-              │
-              ├── 200 OK ──> Return response, mark provider healthy
-              │
-              ├── 429 ──> Mark rate-limited, try next provider
-              │
-              ├── 5xx ──> Trip circuit breaker, try next provider
-              │
-              ├── 400/401/403/404 ──> Non-retriable, return error immediately
-              │
-              └── All exhausted ──> Return 429 "all_providers_exhausted"
-```
-
-### Circuit Breaker States
-
-```
-CLOSED (healthy) ──3 failures──> OPEN (blocked) ──30s timeout──> HALF-OPEN (testing)
-       ^                                                              │
-       └──────────── 2 successes ─────────────────────────────────────┘
-```
-
-Configurable via environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CB_FAILURE_THRESHOLD` | `3` | Failures before tripping open |
-| `CB_SUCCESS_THRESHOLD` | `2` | Successes in half-open before closing |
-| `CB_TIMEOUT_MS` | `30000` | Time before open transitions to half-open |
 
 ## Tech Stack
 
@@ -229,16 +247,18 @@ Configurable via environment variables:
 | UI | Radix UI + Tailwind CSS |
 | State | TanStack Query |
 | Logging | Pino |
-| API Codegen | Orval (from OpenAPI spec) |
+| API Codegen | Orval |
 
 ## Contributing
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feat/my-feature`)
-3. Make your changes
-4. Commit (`git commit -m "feat: add my feature"`)
-5. Push and open a PR
+```bash
+git checkout -b feat/your-feature
+# make changes
+git commit -m "feat: describe what you built"
+git push origin feat/your-feature
+# open a PR
+```
 
 ## License
 
-MIT
+[MIT](LICENSE)
