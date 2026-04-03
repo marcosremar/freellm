@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { router as gatewayRouter, AllProvidersExhaustedError } from "../../gateway/index.js";
+import { router as gatewayRouter, AllProvidersExhaustedError, ProviderClientError } from "../../gateway/index.js";
 import { logger } from "../../lib/logger.js";
 import type { ChatCompletionRequest } from "../../gateway/types.js";
 
@@ -34,6 +34,14 @@ async function handleNonStreamingRequest(
     const data = await gatewayRouter.complete(body);
     res.json(data);
   } catch (err) {
+    if (err instanceof ProviderClientError) {
+      // Propagate the provider's original error payload + status code
+      const body = await err.upstreamResponse.json().catch(() => ({
+        error: { message: err.message, type: "provider_error" },
+      }));
+      res.status(err.statusCode).json(body);
+      return;
+    }
     if (err instanceof AllProvidersExhaustedError) {
       res.status(429).json({
         error: {
@@ -121,6 +129,23 @@ async function handleStreamingRequest(
     res.end();
   } catch (err) {
     const elapsed = Date.now() - startTime;
+
+    if (err instanceof ProviderClientError) {
+      gatewayRouter.requestLog.add({
+        requestedModel: body.model,
+        latencyMs: elapsed,
+        status: "error",
+        error: err.message,
+        streaming: true,
+      });
+      if (!res.headersSent) {
+        const payload = await err.upstreamResponse.json().catch(() => ({
+          error: { message: err.message, type: "provider_error" },
+        }));
+        res.status(err.statusCode).json(payload);
+      }
+      return;
+    }
 
     if (err instanceof AllProvidersExhaustedError) {
       // Log the exhaustion before responding
