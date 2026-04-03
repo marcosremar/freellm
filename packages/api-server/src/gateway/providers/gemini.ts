@@ -7,11 +7,10 @@ export class GeminiProvider extends BaseProvider {
   readonly baseUrl = "https://generativelanguage.googleapis.com/v1beta/openai";
 
   readonly models: ModelObject[] = [
+    { id: "gemini/gemini-2.5-flash", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
+    { id: "gemini/gemini-2.5-pro", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
     { id: "gemini/gemini-2.0-flash", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
     { id: "gemini/gemini-2.0-flash-lite", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
-    { id: "gemini/gemini-1.5-flash", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
-    { id: "gemini/gemini-1.5-flash-8b", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
-    { id: "gemini/gemini-1.5-pro", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
   ];
 
   protected getApiKey(): string | undefined {

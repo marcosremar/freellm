@@ -9,10 +9,8 @@ export class GroqProvider extends BaseProvider {
   readonly models: ModelObject[] = [
     { id: "groq/llama-3.3-70b-versatile", object: "model", created: 1700000000, owned_by: "meta", provider: "groq" },
     { id: "groq/llama-3.1-8b-instant", object: "model", created: 1700000000, owned_by: "meta", provider: "groq" },
-    { id: "groq/gemma2-9b-it", object: "model", created: 1700000000, owned_by: "google", provider: "groq" },
-    { id: "groq/mixtral-8x7b-32768", object: "model", created: 1700000000, owned_by: "mistral", provider: "groq" },
-    { id: "groq/llama3-8b-8192", object: "model", created: 1700000000, owned_by: "meta", provider: "groq" },
-    { id: "groq/llama3-70b-8192", object: "model", created: 1700000000, owned_by: "meta", provider: "groq" },
+    { id: "groq/meta-llama/llama-4-scout-17b-16e-instruct", object: "model", created: 1700000000, owned_by: "meta", provider: "groq" },
+    { id: "groq/qwen/qwen3-32b", object: "model", created: 1700000000, owned_by: "alibaba", provider: "groq" },
   ];
 
   protected getApiKey(): string | undefined {

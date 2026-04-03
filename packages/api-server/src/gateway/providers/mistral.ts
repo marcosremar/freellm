@@ -8,9 +8,8 @@ export class MistralProvider extends BaseProvider {
 
   readonly models: ModelObject[] = [
     { id: "mistral/mistral-small-latest", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
-    { id: "mistral/open-mistral-7b", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
-    { id: "mistral/open-mixtral-8x7b", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
-    { id: "mistral/mistral-nemo", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
+    { id: "mistral/open-mistral-nemo", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
+    { id: "mistral/mistral-medium-latest", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
   ];
 
   protected getApiKey(): string | undefined {

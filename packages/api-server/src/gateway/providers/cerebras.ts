@@ -8,9 +8,8 @@ export class CerebrasProvider extends BaseProvider {
 
   readonly models: ModelObject[] = [
     { id: "cerebras/llama3.1-8b", object: "model", created: 1700000000, owned_by: "meta", provider: "cerebras" },
-    { id: "cerebras/llama3.1-70b", object: "model", created: 1700000000, owned_by: "meta", provider: "cerebras" },
-    { id: "cerebras/llama3.3-70b", object: "model", created: 1700000000, owned_by: "meta", provider: "cerebras" },
-    { id: "cerebras/qwen-3-32b", object: "model", created: 1700000000, owned_by: "alibaba", provider: "cerebras" },
+    { id: "cerebras/qwen-3-235b-a22b-instruct-2507", object: "model", created: 1700000000, owned_by: "alibaba", provider: "cerebras" },
+    { id: "cerebras/gpt-oss-120b", object: "model", created: 1700000000, owned_by: "openai", provider: "cerebras" },
   ];
 
   protected getApiKey(): string | undefined {
