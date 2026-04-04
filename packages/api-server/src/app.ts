@@ -65,7 +65,7 @@ const dashboardDir = path.resolve(
 );
 app.use(express.static(dashboardDir));
 // SPA fallback: serve index.html for any unmatched route (client-side routing)
-app.get("*", (_req, res, next) => {
+app.use((_req, res, next) => {
   res.sendFile(path.join(dashboardDir, "index.html"), (err) => {
     if (err) next();
   });
