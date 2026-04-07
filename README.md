@@ -18,6 +18,8 @@ Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate 
 
 ---
 
+![FreeLLM Dashboard](docs/screenshots/dashboard.png)
+
 </div>
 
 ## The Problem
@@ -317,6 +319,8 @@ A built-in web UI for monitoring your gateway in real time:
 - **Live request log** -- every request with its model, provider, latency, and status
 - **Routing controls** -- switch strategies without restarting the server
 - **Circuit breaker management** -- manually reset a tripped provider when you know it's back
+
+![Models Page](docs/screenshots/models.png)
 
 ## Architecture
 
