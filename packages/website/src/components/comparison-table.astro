@@ -14,46 +14,51 @@ const rows = [
 
 function cell(value: boolean | string) {
   if (value === true) return { text: "✓", className: "yes" };
-  if (value === false) return { text: "✗", className: "no" };
+  if (value === false) return { text: "—", className: "no" };
   return { text: value, className: "" };
 }
 ---
 
 <section class="section">
   <div class="container">
-    <h2>The free-tier-first LLM gateway</h2>
-    <p class="lead">
-      Other gateways treat free tiers as a side note. FreeLLM is built around them.
-    </p>
-    <div style="overflow-x: auto;">
-      <table class="comparison-table">
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th class="freellm-col">FreeLLM</th>
-            <th>LiteLLM</th>
-            <th>OpenRouter</th>
-            <th>Portkey</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const f = cell(r.freellm);
-            const l = cell(r.litellm);
-            const o = cell(r.openrouter);
-            const p = cell(r.portkey);
-            return (
-              <tr>
-                <td>{r.feature}</td>
-                <td class={`freellm-col ${f.className}`}>{f.text}</td>
-                <td class={l.className}>{l.text}</td>
-                <td class={o.className}>{o.text}</td>
-                <td class={p.className}>{p.text}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div class="section-head">
+      <span class="eyebrow">vs the alternatives</span>
+      <h2>The free-tier-first LLM gateway</h2>
+      <p class="lead">
+        Other gateways treat free tiers as a side note. FreeLLM is built around them.
+      </p>
+    </div>
+    <div class="comparison-shell">
+      <div style="overflow-x: auto;">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="freellm-col">FreeLLM</th>
+              <th>LiteLLM</th>
+              <th>OpenRouter</th>
+              <th>Portkey</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const f = cell(r.freellm);
+              const l = cell(r.litellm);
+              const o = cell(r.openrouter);
+              const p = cell(r.portkey);
+              return (
+                <tr>
+                  <td>{r.feature}</td>
+                  <td class={`freellm-col ${f.className}`}>{f.text}</td>
+                  <td class={l.className}>{l.text}</td>
+                  <td class={o.className}>{o.text}</td>
+                  <td class={p.className}>{p.text}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>

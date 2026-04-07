@@ -13,7 +13,27 @@ export default defineConfig({
         replacesTitle: true,
       },
       favicon: "/favicon.svg",
-      head: [],
+      head: [
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.gstatic.com",
+            crossorigin: "",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600&display=swap",
+          },
+        },
+      ],
       social: {
         github: "https://github.com/Devansh-365/freellm",
       },

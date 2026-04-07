@@ -1,6 +1,11 @@
 /*
-  FreeLLM Starlight theme — matches the dashboard aesthetic.
-  Dark mode primary, green accent (hsl 150 100% 40%), JetBrains Mono for code.
+  FreeLLM Starlight theme — Ethereal Glass aesthetic.
+  Premium font stack (Geist + Geist Mono), green accent (hsl 150 100% 40%),
+  custom cubic-bezier motion, tinted shadows.
+
+  NOTE: Geist is loaded via <link> tags in index.astro <head> and Starlight
+  head config — NOT via @import here, because Vite processes @import after
+  initial render which causes a flash of system-font-style.
 */
 
 :root {
@@ -8,6 +13,11 @@
   --sl-color-accent-low: hsl(150 100% 10%);
   --sl-color-accent: hsl(150 100% 40%);
   --sl-color-accent-high: hsl(150 100% 70%);
+
+  /* Custom motion curves — Apple's signature easing */
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
 }
 
 :root[data-theme="dark"] {
@@ -18,11 +28,11 @@
   --sl-color-gray-4: #4a4d63;
   --sl-color-gray-5: #2c2e3e;
   --sl-color-gray-6: #1c1d2c;
-  --sl-color-black: #0a0b14;
+  --sl-color-black: #050608;
 
-  --sl-color-bg: #0a0b14;
-  --sl-color-bg-nav: #0a0b14;
-  --sl-color-bg-sidebar: #0a0b14;
+  --sl-color-bg: #050608;
+  --sl-color-bg-nav: #050608;
+  --sl-color-bg-sidebar: #050608;
   --sl-color-bg-inline-code: hsl(150 100% 40% / 0.08);
   --sl-color-text-accent: hsl(150 100% 50%);
   --sl-color-text-invert: var(--sl-color-black);
@@ -33,26 +43,52 @@
 }
 
 :root[data-theme="light"] {
-  /* Keep light mode usable but the brand is dark-first */
   --sl-color-accent-low: hsl(150 100% 90%);
   --sl-color-accent: hsl(150 100% 35%);
   --sl-color-accent-high: hsl(150 100% 25%);
 }
 
-/* JetBrains Mono for code blocks; system stack for body text */
+/* Premium font stack: Geist for everything (no Inter, no system defaults) */
 :root {
-  --sl-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --sl-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Monaco,
-    "Cascadia Code", "Roboto Mono", monospace;
+  --sl-font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sl-font-mono: "Geist Mono", ui-monospace, "SF Mono", Monaco, "Cascadia Code",
+    "JetBrains Mono", monospace;
+  --sl-font-system: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --sl-font-system-mono: "Geist Mono", ui-monospace, monospace;
 }
 
-/* Subtle grid background that matches the dashboard */
+/* Body uses Geist font + subtle grid + faint radial gradient for depth.
+   The !important is needed to override Starlight's body font reset. */
+html,
+body {
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background-image:
-    linear-gradient(to right, hsl(150 100% 40% / 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(150 100% 40% / 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(to right, hsl(150 100% 40% / 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(150 100% 40% / 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Starlight content area override — force Geist on all docs content */
+.sl-markdown-content,
+.content,
+.sidebar-content,
+header.header,
+.right-sidebar {
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+}
+
+/* Code blocks use Geist Mono */
+code,
+pre,
+kbd,
+samp,
+.expressive-code {
+  font-family: "Geist Mono", ui-monospace, "SF Mono", monospace !important;
 }
 
 /* Inline code styling */
@@ -61,14 +97,25 @@ body {
   background: var(--sl-color-bg-inline-code);
   border: 1px solid hsl(150 100% 40% / 0.2);
   border-radius: 4px;
-  padding: 0.125em 0.375em;
-  font-size: 0.9em;
+  padding: 0.125em 0.4em;
+  font-size: 0.88em;
+  font-weight: 500;
 }
 
-/* Heading polish */
+/* Heading polish — tighter tracking, premium weight */
 .content h1,
 .content h2,
 .content h3 {
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  font-feature-settings: "ss01", "ss02", "cv11";
+}
+
+.content h1 { letter-spacing: -0.035em; }
+
+/* Tabular numbers everywhere they appear */
+.content table,
+.content code,
+.content pre {
+  font-variant-numeric: tabular-nums;
 }

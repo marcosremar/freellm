@@ -3,18 +3,22 @@
 
 <section class="section code-section">
   <div class="container">
-    <h2>Change one line. Keep your code.</h2>
-    <p class="lead">
-      Any OpenAI-compatible SDK works. Swap your base URL — that's it.
-    </p>
+    <div class="section-head">
+      <span class="eyebrow">Drop-in replacement</span>
+      <h2>Change one line. Keep your code.</h2>
+      <p class="lead">
+        Any OpenAI-compatible SDK works. Swap your base URL — that's it.
+      </p>
+    </div>
     <div class="code-tabs">
-      <div class="tab-buttons" role="tablist">
-        <button class="tab-button active" data-tab="python" role="tab">Python</button>
-        <button class="tab-button" data-tab="typescript" role="tab">TypeScript</button>
-        <button class="tab-button" data-tab="curl" role="tab">curl</button>
-      </div>
-      <div class="tab-content" id="tab-python">
-        <pre><code>{`from openai import OpenAI
+      <div class="code-tabs-inner">
+        <div class="tab-buttons" role="tablist">
+          <button class="tab-button active" data-tab="python" role="tab">Python</button>
+          <button class="tab-button" data-tab="typescript" role="tab">TypeScript</button>
+          <button class="tab-button" data-tab="curl" role="tab">curl</button>
+        </div>
+        <div class="tab-content" id="tab-python">
+          <pre><code>{`from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:3000/v1",
@@ -28,9 +32,9 @@ response = client.chat.completions.create(
 
 print(response.choices[0].message.content)
 print("Provider used:", response.x_freellm_provider)`}</code></pre>
-      </div>
-      <div class="tab-content" id="tab-typescript" hidden>
-        <pre><code>{`import OpenAI from "openai";
+        </div>
+        <div class="tab-content" id="tab-typescript" hidden>
+          <pre><code>{`import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "http://localhost:3000/v1",
@@ -43,14 +47,15 @@ const response = await client.chat.completions.create({
 });
 
 console.log(response.choices[0].message.content);`}</code></pre>
-      </div>
-      <div class="tab-content" id="tab-curl" hidden>
-        <pre><code>{`curl http://localhost:3000/v1/chat/completions \\
+        </div>
+        <div class="tab-content" id="tab-curl" hidden>
+          <pre><code>{`curl http://localhost:3000/v1/chat/completions \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "free",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'`}</code></pre>
+        </div>
       </div>
     </div>
   </div>

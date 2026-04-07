@@ -35,23 +35,30 @@ const providers = [
 
 <section class="section">
   <div class="container">
-    <h2>Six free tiers, stitched into one.</h2>
-    <p class="lead">
-      Sign up for whichever providers you want, paste the keys into one .env file,
-      and FreeLLM handles the routing, the rate limits, and the failover.
-    </p>
+    <div class="section-head">
+      <span class="eyebrow">Six free tiers</span>
+      <h2>Stitched into one endpoint</h2>
+      <p class="lead">
+        Sign up for whichever providers you want, paste the keys into one .env file,
+        and FreeLLM handles the routing, the rate limits, and the failover.
+      </p>
+    </div>
     <div class="provider-grid">
       {providers.map((p) => (
         <div class="provider-card">
-          <h3 class="name">{p.name}</h3>
-          <p class="rpm">{p.rpm}</p>
-          <p class="models">{p.models}</p>
+          <div class="provider-card-inner">
+            <h3 class="name">{p.name}</h3>
+            <p class="rpm">{p.rpm}</p>
+            <p class="models">{p.models}</p>
+          </div>
         </div>
       ))}
     </div>
     <div class="capacity-callout">
-      Baseline: ~120 req/min with 1 key each.<br />
-      With <strong>3 keys per provider</strong>: <strong>~360 req/min</strong>. All <strong>$0</strong>.
+      <div class="capacity-callout-inner">
+        Baseline: ~120 req/min with 1 key each.<br />
+        With <strong>3 keys per provider</strong>: <strong>~360 req/min</strong>. All <strong>$0</strong>.
+      </div>
     </div>
   </div>
 </section>

@@ -9,14 +9,16 @@ const stats = [
 
 <section class="stats-bar">
   <div class="container">
-    <div class="stats-grid">
-      {stats.map((s) => (
-        <div class="stat">
-          <div class="stat-value">{s.value}</div>
-          <div class="stat-label">{s.label}</div>
-          {s.note && <div class="stat-note">{s.note}</div>}
-        </div>
-      ))}
+    <div class="stats-shell">
+      <div class="stats-grid">
+        {stats.map((s) => (
+          <div class="stat">
+            <div class="stat-value">{s.value}</div>
+            <div class="stat-label">{s.label}</div>
+            {s.note && <div class="stat-note">{s.note}</div>}
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 </section>
