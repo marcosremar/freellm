@@ -18,7 +18,7 @@ Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate 
 
 ---
 
-![FreeLLM Dashboard](docs/screenshots/dashboard.png)
+![FreeLLM Dashboard](docs/screenshots/dashboard-demo.gif)
 
 </div>
 
