@@ -1,0 +1,36 @@
+---
+title: Circuit Breakers
+description: Per-provider health tracking that protects against cascading failures.
+---
+
+Each provider has an independent **circuit breaker** with three states:
+
+```
+CLOSED (healthy) ──3 failures──> OPEN (failing) ──30s──> HALF-OPEN (testing)
+       ^                                                          │
+       └─────────── 2 successes in half-open ────────────────────┘
+```
+
+**Closed** — Requests flow normally. Failure counter resets on success.
+
+**Open** — All requests to this provider are blocked. After 30 seconds, the breaker transitions to half-open to test recovery.
+
+**Half-Open** — One request is allowed through. If 2 successive successes occur, the breaker closes. If any failure occurs, it returns to open.
+
+## Configuration
+
+| Variable | Default | What It Controls |
+|----------|---------|-----------------|
+| `CB_FAILURE_THRESHOLD` | `3` | Consecutive failures before tripping open |
+| `CB_SUCCESS_THRESHOLD` | `2` | Successes needed in half-open to recover |
+| `CB_TIMEOUT_MS` | `30000` | Wait time before testing an open breaker |
+
+## Manual reset
+
+Trip happened to a provider you know is back? Reset it via the API:
+
+```bash
+curl -X POST http://localhost:3000/v1/status/providers/groq/reset
+```
+
+Or click the **Reset** button on the provider card in the dashboard.

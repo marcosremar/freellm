@@ -1,0 +1,69 @@
+---
+title: Token Usage Tracking
+description: Rolling 24-hour token counts per provider with zero configuration.
+---
+
+Free tiers don't just have RPM limits — they have **daily token caps** (Groq: 500K/day, Gemini: 1M/day, etc.). FreeLLM tracks every successful request's `prompt_tokens` and `completion_tokens` against a rolling 24-hour window per provider, so you always know how much of your free budget is left.
+
+## How it works
+
+Every successful non-streaming response from an OpenAI-compatible provider includes a `usage` object:
+
+```json
+{
+  "usage": {
+    "prompt_tokens": 15,
+    "completion_tokens": 42,
+    "total_tokens": 57
+  }
+}
+```
+
+FreeLLM extracts this and records it against the provider via the `UsageTracker` class, which uses **hourly buckets** (24 max per provider) for O(1) writes and O(24) reads. Memory footprint is tiny — under 600 bytes per provider even when fully populated.
+
+The data is **in-memory** and resets on process restart. This is acceptable because upstream providers reset their daily quotas independently — FreeLLM's view will catch up within an hour as new requests come in.
+
+## API access
+
+`GET /v1/status` exposes per-provider and gateway-wide totals:
+
+```json
+{
+  "totalRequests": 87,
+  "successRequests": 85,
+  "failedRequests": 2,
+  "usage": {
+    "promptTokens": 142560,
+    "completionTokens": 38912,
+    "totalTokens": 181472,
+    "requestCount": 85
+  },
+  "providers": [
+    {
+      "id": "groq",
+      "usage": {
+        "promptTokens": 78000,
+        "completionTokens": 19200,
+        "totalTokens": 97200,
+        "requestCount": 42
+      }
+    }
+  ]
+}
+```
+
+## Dashboard surfaces
+
+The dashboard shows token usage in three places:
+
+- **Top metrics row** — gateway-wide "Tokens (24h)" card with compact formatting (`1234 → "1.2K"`, `1.5M → "1.50M"`)
+- **Provider cards** — per-provider amber "TOKENS (24H)" block showing total + `in X · out Y` breakdown
+- **Recent requests table** — new "Tokens" column showing `prompt → completion` per request
+
+## Streaming limitation
+
+Streaming responses currently don't track tokens. The OpenAI SSE protocol only includes a final `usage` chunk when the client passes `stream_options: { include_usage: true }` — and FreeLLM doesn't inject that flag automatically because we want to forward your request unchanged.
+
+This will be addressed in a future release, either by:
+- Auto-injecting `stream_options.include_usage` when `stream: true`
+- Using a tokenizer (tiktoken or similar) to count tokens client-side

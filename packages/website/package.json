@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/starlight": "^0.30.6",
+    "astro": "^5.1.5",
+    "sharp": "^0.33.5",
+    "typescript": "^5.9.0"
+  }
+}

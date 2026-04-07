@@ -1,0 +1,52 @@
+---
+import "../styles/theme.css";
+import "../styles/landing.css";
+import Hero from "../components/hero.astro";
+import FeatureGrid from "../components/feature-grid.astro";
+import ProviderShowcase from "../components/provider-showcase.astro";
+import CodeTabs from "../components/code-tabs.astro";
+import ComparisonTable from "../components/comparison-table.astro";
+import DeployButtons from "../components/deploy-buttons.astro";
+import LandingHeader from "../components/landing-header.astro";
+import LandingFooter from "../components/landing-footer.astro";
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="description"
+      content="OpenAI-compatible gateway aggregating 6 free LLM providers (Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, Ollama) with automatic failover, multi-key rotation, and a real-time dashboard. Zero cost."
+    />
+    <meta property="og:title" content="FreeLLM — Stack free LLM tiers into one endpoint" />
+    <meta
+      property="og:description"
+      content="OpenAI-compatible gateway aggregating 6 free LLM providers with automatic failover, multi-key rotation, and a real-time dashboard. Zero cost."
+    />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>FreeLLM — Stack free LLM tiers into one endpoint</title>
+  </head>
+  <body>
+    <LandingHeader />
+    <main>
+      <Hero />
+      <FeatureGrid />
+      <ProviderShowcase />
+      <CodeTabs />
+      <ComparisonTable />
+      <section class="cta">
+        <div class="container">
+          <h2>Deploy your gateway in 2 minutes</h2>
+          <p>One-click deploy to Railway or Render — bring your own free-tier API keys.</p>
+          <DeployButtons />
+        </div>
+      </section>
+    </main>
+    <LandingFooter />
+  </body>
+</html>

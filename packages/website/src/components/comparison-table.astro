@@ -1,0 +1,59 @@
+---
+const rows = [
+  { feature: "Truly $0 (no markup, no subscription)", freellm: true, litellm: "Self-host", openrouter: false, portkey: false },
+  { feature: "Multi-key rotation per provider", freellm: true, litellm: false, openrouter: false, portkey: false },
+  { feature: "OpenAI-compatible", freellm: true, litellm: true, openrouter: true, portkey: true },
+  { feature: "Automatic failover", freellm: true, litellm: true, openrouter: true, portkey: true },
+  { feature: "Built-in real-time dashboard", freellm: true, litellm: false, openrouter: true, portkey: true },
+  { feature: "Per-provider token tracking", freellm: true, litellm: true, openrouter: true, portkey: true },
+  { feature: "Circuit breakers", freellm: true, litellm: "Partial", openrouter: true, portkey: true },
+  { feature: "Self-hosted", freellm: true, litellm: true, openrouter: false, portkey: "Both" },
+  { feature: "TypeScript codebase (auditable)", freellm: true, litellm: false, openrouter: "?", portkey: false },
+  { feature: "One-click cloud deploy", freellm: true, litellm: false, openrouter: "n/a", portkey: false },
+];
+
+function cell(value: boolean | string) {
+  if (value === true) return { text: "✓", className: "yes" };
+  if (value === false) return { text: "✗", className: "no" };
+  return { text: value, className: "" };
+}
+---
+
+<section class="section">
+  <div class="container">
+    <h2>How FreeLLM compares</h2>
+    <p class="lead">
+      Built specifically for free tiers. Other gateways assume you pay per token.
+    </p>
+    <div style="overflow-x: auto;">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="freellm-col">FreeLLM</th>
+            <th>LiteLLM</th>
+            <th>OpenRouter</th>
+            <th>Portkey</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const f = cell(r.freellm);
+            const l = cell(r.litellm);
+            const o = cell(r.openrouter);
+            const p = cell(r.portkey);
+            return (
+              <tr>
+                <td>{r.feature}</td>
+                <td class={`freellm-col ${f.className}`}>{f.text}</td>
+                <td class={l.className}>{l.text}</td>
+                <td class={o.className}>{o.text}</td>
+                <td class={p.className}>{p.text}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

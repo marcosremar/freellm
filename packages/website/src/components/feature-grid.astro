@@ -1,0 +1,62 @@
+---
+const features = [
+  {
+    icon: "↔",
+    title: "OpenAI-compatible",
+    desc: "Drop-in replacement. Swap your base URL, keep all your existing OpenAI SDK code unchanged.",
+  },
+  {
+    icon: "⚡",
+    title: "Automatic failover",
+    desc: "When Groq is rate-limited, FreeLLM silently routes to Gemini, then Mistral, then Cerebras. You always get a response.",
+  },
+  {
+    icon: "🔑",
+    title: "Multi-key rotation",
+    desc: "Stack multiple API keys per provider with comma-separated env vars. Triple your free-tier capacity in 10 seconds.",
+  },
+  {
+    icon: "📊",
+    title: "Token usage tracking",
+    desc: "Rolling 24-hour token counts per provider. Always know how much of your free budget is left.",
+  },
+  {
+    icon: "🛡",
+    title: "Circuit breakers",
+    desc: "Per-provider health tracking with three states (closed, open, half-open). Cascading failures stay contained.",
+  },
+  {
+    icon: "🎯",
+    title: "Smart meta-models",
+    desc: "Pick a strategy, not a provider. Use free-fast for speed, free-smart for capability, or free for max uptime.",
+  },
+  {
+    icon: "📈",
+    title: "Real-time dashboard",
+    desc: "Built-in React dashboard shows provider health, live request log, latency, and token usage at a glance.",
+  },
+  {
+    icon: "💰",
+    title: "Zero cost",
+    desc: "Every provider runs on its free tier. No markups, no subscriptions, no surprises. Self-host in 2 minutes.",
+  },
+];
+---
+
+<section class="section">
+  <div class="container">
+    <h2>Everything you need to manage free LLM APIs</h2>
+    <p class="lead">
+      Production-quality routing, observability, and reliability — built specifically for free-tier providers.
+    </p>
+    <div class="feature-grid">
+      {features.map((f) => (
+        <div class="feature-card">
+          <div class="icon">{f.icon}</div>
+          <h3>{f.title}</h3>
+          <p>{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

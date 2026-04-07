@@ -1,0 +1,44 @@
+---
+title: Comparison
+description: How FreeLLM compares to LiteLLM, OpenRouter, Portkey, and other LLM gateways.
+---
+
+There are many LLM gateways. FreeLLM occupies a position none of them target: **truly $0 by design**, built specifically for stitching free-tier providers into a reliable dev tier.
+
+| Feature | FreeLLM | LiteLLM | OpenRouter | Portkey |
+|---------|:-------:|:-------:|:----------:|:-------:|
+| Truly $0 (no markup) | ✅ | Self-host | ❌ 5% markup | ❌ $49+/mo |
+| Multi-key rotation per provider | ✅ | ❌ | ❌ | ❌ |
+| OpenAI-compatible | ✅ | ✅ | ✅ | ✅ |
+| Automatic failover | ✅ | ✅ | ✅ | ✅ |
+| Built-in real-time dashboard | ✅ | ❌ | ✅ | ✅ |
+| Per-provider token tracking | ✅ | ✅ | ✅ | ✅ |
+| Circuit breakers | ✅ | Partial | ✅ | ✅ |
+| Self-hosted | ✅ | ✅ | ❌ | Both |
+| TypeScript codebase | ✅ | ❌ Python | ? | ❌ |
+| One-click cloud deploy | ✅ | ❌ | n/a | ❌ |
+
+## When to use which
+
+- **FreeLLM** — You want production-quality reliability for $0. You're prototyping, building a side project, or running internal tools.
+- **LiteLLM** — You need 100+ provider support and don't mind YAML config + Python.
+- **OpenRouter** — You want zero ops effort and don't mind paying ~5% markup on tokens.
+- **Portkey** — You're an enterprise team with budget and need SSO, audit logs, RBAC, and guardrails.
+
+## What FreeLLM is NOT trying to be
+
+We deliberately don't compete with LiteLLM on provider count, OpenRouter on hosted convenience, or Portkey on enterprise features. The "free tier" angle is the moat — every feature in FreeLLM answers the question: *Does this help someone get more value out of free LLM APIs?*
+
+## A note on supply chain security
+
+In late 2025, LiteLLM had a [significant supply chain attack](https://github.com/BerriAI/litellm/issues/24518). Malicious versions on PyPI shipped credential stealers and persistent backdoors.
+
+If you're concerned about LLM gateway supply chain risk, FreeLLM has structural advantages:
+
+- **~2k lines of code** vs LiteLLM's 100k+ — auditable in an afternoon
+- **TypeScript instead of Python** — different dependency ecosystem
+- **Pinned dependencies** with `pnpm-lock.yaml` committed
+- **Multi-arch Docker images** signed and published via GitHub Actions to GHCR
+- **Single-developer repository** with traceable commits
+
+Pick the gateway that matches your threat model.

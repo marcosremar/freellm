@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle with dark slate -->
+  <circle cx="256" cy="256" r="240" fill="#0F172A"/>
+
+  <!-- Abstract routing paths - 5 lines converging to one point -->
+  <!-- Represents 5 providers merging into one endpoint -->
+
+  <!-- Provider lines (left side, fanning out) -->
+  <!-- Groq - orange -->
+  <path d="M100 140 Q180 140 220 220" stroke="#F97316" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Gemini - blue -->
+  <path d="M80 200 Q160 200 220 240" stroke="#3B82F6" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Mistral - purple -->
+  <path d="M70 260 Q150 260 220 260" stroke="#A855F7" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Cerebras - teal -->
+  <path d="M80 320 Q160 320 220 280" stroke="#14B8A6" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Ollama - slate -->
+  <path d="M100 380 Q180 380 220 300" stroke="#64748B" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+
+  <!-- Provider dots (left) -->
+  <circle cx="100" cy="140" r="10" fill="#F97316"/>
+  <circle cx="80" cy="200" r="10" fill="#3B82F6"/>
+  <circle cx="70" cy="260" r="10" fill="#A855F7"/>
+  <circle cx="80" cy="320" r="10" fill="#14B8A6"/>
+  <circle cx="100" cy="380" r="10" fill="#64748B"/>
+
+  <!-- Central convergence node (the gateway) -->
+  <circle cx="256" cy="260" r="32" fill="#22C55E" opacity="0.15"/>
+  <circle cx="256" cy="260" r="22" fill="#22C55E" opacity="0.3"/>
+  <circle cx="256" cy="260" r="14" fill="#22C55E"/>
+
+  <!-- Merge paths into gateway -->
+  <path d="M220 220 Q240 240 242 260" stroke="#F97316" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M220 240 Q235 250 242 260" stroke="#3B82F6" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M220 260 L242 260" stroke="#A855F7" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M220 280 Q235 270 242 260" stroke="#14B8A6" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M220 300 Q240 280 242 260" stroke="#64748B" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+  <!-- Output path (right side - single clean line) -->
+  <path d="M270 260 L400 260" stroke="#22C55E" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+  <!-- Output arrow head -->
+  <path d="M390 245 L410 260 L390 275" stroke="#22C55E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Client dot (right) -->
+  <circle cx="420" cy="260" r="12" fill="#22C55E"/>
+
+  <!-- Circuit breaker ring around gateway (subtle) -->
+  <circle cx="256" cy="260" r="44" stroke="#22C55E" stroke-width="2" stroke-dasharray="8 6" fill="none" opacity="0.4"/>
+</svg>

@@ -1,0 +1,56 @@
+---
+const providers = [
+  {
+    name: "Groq",
+    rpm: "~30 req/min per key",
+    models: "Llama 3.3 70B, Llama 3.1 8B, Llama 4 Scout, Qwen3 32B",
+  },
+  {
+    name: "Gemini",
+    rpm: "~15 req/min per key",
+    models: "Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite",
+  },
+  {
+    name: "Mistral",
+    rpm: "~5 req/min per key",
+    models: "Mistral Small, Medium, Nemo",
+  },
+  {
+    name: "Cerebras",
+    rpm: "~30 req/min per key",
+    models: "Llama 3.1 8B, Qwen3 235B, GPT-OSS 120B",
+  },
+  {
+    name: "NVIDIA NIM",
+    rpm: "~40 req/min per key",
+    models: "Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, DeepSeek R1",
+  },
+  {
+    name: "Ollama",
+    rpm: "Unlimited (local)",
+    models: "Any local model on your hardware",
+  },
+];
+---
+
+<section class="section">
+  <div class="container">
+    <h2>6 providers. 25+ models. All free.</h2>
+    <p class="lead">
+      Get free API keys from each provider, paste them into one .env file, and FreeLLM handles the rest.
+    </p>
+    <div class="provider-grid">
+      {providers.map((p) => (
+        <div class="provider-card">
+          <h3 class="name">{p.name}</h3>
+          <p class="rpm">{p.rpm}</p>
+          <p class="models">{p.models}</p>
+        </div>
+      ))}
+    </div>
+    <div class="capacity-callout">
+      Baseline: ~120 req/min with 1 key each.<br />
+      With <strong>3 keys per provider</strong>: <strong>~360 req/min</strong>. All <strong>$0</strong>.
+    </div>
+  </div>
+</section>

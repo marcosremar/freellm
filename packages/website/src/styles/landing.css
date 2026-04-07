@@ -1,0 +1,570 @@
+/*
+  Landing page styles — uses the same brand variables as the Starlight theme.
+  Dark-first, green accent, mono code, subtle grid background.
+*/
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--sl-color-bg, #0a0b14);
+  color: var(--sl-color-white, #ffffff);
+  font-family: var(--sl-font, ui-sans-serif, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: hsl(150 100% 50%);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ─── Header ─────────────────────────────────────── */
+
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: hsl(0 0% 0% / 0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid hsl(150 100% 40% / 0.15);
+}
+
+.landing-header .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.landing-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--sl-font-mono);
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--sl-color-white);
+}
+
+.landing-header .brand img {
+  width: 32px;
+  height: 32px;
+}
+
+.landing-header nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.landing-header nav a {
+  color: hsl(0 0% 80%);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.landing-header nav a:hover {
+  color: hsl(150 100% 50%);
+  text-decoration: none;
+}
+
+.landing-header .star-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid hsl(150 100% 40% / 0.4);
+  border-radius: 6px;
+  background: hsl(150 100% 40% / 0.1);
+  color: hsl(150 100% 60%);
+  font-family: var(--sl-font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+}
+
+.landing-header .star-btn:hover {
+  background: hsl(150 100% 40% / 0.2);
+  border-color: hsl(150 100% 40% / 0.6);
+  text-decoration: none;
+}
+
+/* ─── Hero ──────────────────────────────────────── */
+
+.hero {
+  padding: 6rem 0 4rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at top,
+    hsl(150 100% 40% / 0.15) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+.hero .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid hsl(150 100% 40% / 0.3);
+  border-radius: 999px;
+  background: hsl(150 100% 40% / 0.08);
+  color: hsl(150 100% 60%);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 1.5rem;
+  background: linear-gradient(180deg, #fff 0%, hsl(0 0% 75%) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero .subtitle {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: hsl(0 0% 70%);
+  max-width: 720px;
+  margin: 0 auto 2.5rem;
+}
+
+.hero .accent {
+  color: hsl(150 100% 60%);
+  font-weight: 600;
+}
+
+.hero .cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 4rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  border-radius: 8px;
+  font-family: var(--sl-font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background: hsl(150 100% 40%);
+  color: #000;
+}
+
+.btn-primary:hover {
+  background: hsl(150 100% 50%);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: hsl(0 0% 90%);
+  border-color: hsl(0 0% 30%);
+}
+
+.btn-secondary:hover {
+  border-color: hsl(150 100% 40% / 0.6);
+  color: hsl(150 100% 60%);
+  text-decoration: none;
+}
+
+.hero .demo-frame {
+  max-width: 1080px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid hsl(150 100% 40% / 0.2);
+  box-shadow:
+    0 0 60px hsl(150 100% 40% / 0.15),
+    0 20px 60px hsl(0 0% 0% / 0.5);
+}
+
+.hero .demo-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ─── Sections ──────────────────────────────────── */
+
+.section {
+  padding: 5rem 0;
+  position: relative;
+}
+
+.section h2 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0 0 0.75rem;
+}
+
+.section .lead {
+  font-size: 1.125rem;
+  color: hsl(0 0% 65%);
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 3rem;
+  line-height: 1.6;
+}
+
+/* ─── Feature Grid ──────────────────────────────── */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.feature-card {
+  padding: 1.75rem;
+  border: 1px solid hsl(150 100% 40% / 0.15);
+  border-radius: 10px;
+  background: hsl(150 100% 40% / 0.02);
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: hsl(150 100% 40% / 0.3);
+  background: hsl(150 100% 40% / 0.04);
+  transform: translateY(-2px);
+}
+
+.feature-card .icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(150 100% 40% / 0.1);
+  border: 1px solid hsl(150 100% 40% / 0.2);
+  border-radius: 8px;
+  color: hsl(150 100% 60%);
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--sl-color-white);
+}
+
+.feature-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: hsl(0 0% 65%);
+  line-height: 1.6;
+}
+
+/* ─── Provider Showcase ─────────────────────────── */
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.provider-card {
+  padding: 1.5rem;
+  border: 1px solid hsl(150 100% 40% / 0.15);
+  border-radius: 10px;
+  background: hsl(0 0% 0% / 0.3);
+  text-align: left;
+}
+
+.provider-card .name {
+  font-family: var(--sl-font-mono);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: hsl(150 100% 60%);
+  margin: 0 0 0.5rem;
+}
+
+.provider-card .rpm {
+  font-family: var(--sl-font-mono);
+  font-size: 0.8rem;
+  color: hsl(0 0% 60%);
+  margin: 0 0 0.75rem;
+}
+
+.provider-card .models {
+  font-size: 0.8rem;
+  color: hsl(0 0% 75%);
+  line-height: 1.5;
+}
+
+.capacity-callout {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  border: 1px solid hsl(150 100% 40% / 0.3);
+  border-radius: 10px;
+  background: hsl(150 100% 40% / 0.05);
+  text-align: center;
+  font-family: var(--sl-font-mono);
+}
+
+.capacity-callout strong {
+  color: hsl(150 100% 60%);
+}
+
+/* ─── Code Tabs ─────────────────────────────────── */
+
+.code-section {
+  background: hsl(0 0% 0% / 0.3);
+}
+
+.code-tabs {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid hsl(150 100% 40% / 0.15);
+  margin-bottom: 0;
+}
+
+.tab-button {
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  color: hsl(0 0% 60%);
+  font-family: var(--sl-font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.tab-button:hover {
+  color: hsl(0 0% 90%);
+}
+
+.tab-button.active {
+  color: hsl(150 100% 60%);
+  border-bottom-color: hsl(150 100% 40%);
+}
+
+.tab-content {
+  background: #0a0b14;
+  border: 1px solid hsl(150 100% 40% / 0.15);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 1.5rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.tab-content pre {
+  margin: 0;
+  color: hsl(0 0% 90%);
+}
+
+.tab-content[hidden] {
+  display: none;
+}
+
+/* ─── Comparison Table ──────────────────────────── */
+
+.comparison-table {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  border: 1px solid hsl(150 100% 40% / 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 1rem 1.25rem;
+  text-align: left;
+  border-bottom: 1px solid hsl(150 100% 40% / 0.1);
+}
+
+.comparison-table th {
+  background: hsl(150 100% 40% / 0.05);
+  color: hsl(150 100% 60%);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.comparison-table .yes {
+  color: hsl(150 100% 50%);
+  font-weight: 600;
+}
+
+.comparison-table .no {
+  color: hsl(0 60% 60%);
+}
+
+.comparison-table .freellm-col {
+  background: hsl(150 100% 40% / 0.04);
+}
+
+/* ─── CTA section ───────────────────────────────── */
+
+.cta {
+  padding: 5rem 0;
+  text-align: center;
+  background: radial-gradient(
+    ellipse at center,
+    hsl(150 100% 40% / 0.08) 0%,
+    transparent 70%
+  );
+}
+
+.cta h2 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+}
+
+.cta p {
+  color: hsl(0 0% 65%);
+  margin: 0 0 2rem;
+}
+
+/* ─── Deploy buttons ────────────────────────────── */
+
+.deploy-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.deploy-buttons img {
+  height: 36px;
+}
+
+/* ─── Footer ────────────────────────────────────── */
+
+.landing-footer {
+  border-top: 1px solid hsl(150 100% 40% / 0.15);
+  padding: 3rem 0 2rem;
+  margin-top: 4rem;
+}
+
+.landing-footer .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.landing-footer .brand-line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.9rem;
+  color: hsl(0 0% 60%);
+}
+
+.landing-footer .brand-line img {
+  width: 28px;
+  height: 28px;
+}
+
+.landing-footer nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.landing-footer nav a {
+  color: hsl(0 0% 60%);
+  font-size: 0.85rem;
+}
+
+.landing-footer .copyright {
+  font-size: 0.8rem;
+  color: hsl(0 0% 50%);
+  font-family: var(--sl-font-mono);
+}
+
+/* ─── Responsive ────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .landing-header nav {
+    gap: 1rem;
+  }
+
+  .landing-header nav a {
+    font-size: 0.8rem;
+  }
+
+  .hero {
+    padding: 4rem 0 3rem;
+  }
+
+  .section {
+    padding: 3rem 0;
+  }
+
+  .landing-footer .container {
+    flex-direction: column;
+    text-align: center;
+  }
+}

@@ -1,0 +1,71 @@
+---
+---
+
+<section class="section code-section">
+  <div class="container">
+    <h2>Drop-in OpenAI replacement</h2>
+    <p class="lead">
+      Use any OpenAI-compatible SDK. The only thing that changes is the base URL.
+    </p>
+    <div class="code-tabs">
+      <div class="tab-buttons" role="tablist">
+        <button class="tab-button active" data-tab="python" role="tab">Python</button>
+        <button class="tab-button" data-tab="typescript" role="tab">TypeScript</button>
+        <button class="tab-button" data-tab="curl" role="tab">curl</button>
+      </div>
+      <div class="tab-content" id="tab-python">
+        <pre><code>{`from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:3000/v1",
+    api_key="unused",
+)
+
+response = client.chat.completions.create(
+    model="free-fast",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+print(response.choices[0].message.content)
+print("Provider used:", response.x_freellm_provider)`}</code></pre>
+      </div>
+      <div class="tab-content" id="tab-typescript" hidden>
+        <pre><code>{`import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "http://localhost:3000/v1",
+  apiKey: "unused",
+});
+
+const response = await client.chat.completions.create({
+  model: "free-smart",
+  messages: [{ role: "user", content: "Explain recursion." }],
+});
+
+console.log(response.choices[0].message.content);`}</code></pre>
+      </div>
+      <div class="tab-content" id="tab-curl" hidden>
+        <pre><code>{`curl http://localhost:3000/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "free",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'`}</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".tab-button");
+  const contents = document.querySelectorAll<HTMLDivElement>(".tab-content");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      buttons.forEach((b) => b.classList.toggle("active", b === btn));
+      contents.forEach((c) => {
+        c.hidden = c.id !== `tab-${tab}`;
+      });
+    });
+  });
+</script>

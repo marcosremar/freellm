@@ -1,0 +1,69 @@
+---
+title: Multi-Key Rotation
+description: Stack multiple API keys per provider to multiply your free-tier capacity.
+---
+
+Every provider env var in FreeLLM accepts a **comma-separated list of API keys**. FreeLLM rotates through them with independent per-key rate-limit budgets, and concurrent requests spread across keys automatically.
+
+This is the feature that makes FreeLLM structurally different from every other LLM gateway — no other gateway does this because they all assume you pay per token, where multi-key has no upside. For a free-tier gateway, it's a **3×–10× capacity multiplier**.
+
+## How it works
+
+```bash
+# Single key (works as before)
+GROQ_API_KEY=gsk_key1
+
+# Four keys — 4× the free-tier capacity
+GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4
+```
+
+When the request comes in:
+
+1. FreeLLM picks the next key via round-robin (synchronously advanced so concurrent requests spread across keys)
+2. The chosen key's rate-limit window is checked — if full, FreeLLM tries the next key
+3. The request is sent with the picked key's `Authorization: Bearer <key>` header
+4. If the response is `429`, only **that key** is cooled down — the other keys remain available
+5. The provider is only excluded from routing when **all** of its keys are exhausted
+
+## Real-world math
+
+Stack 3 keys per provider across all 5 cloud providers:
+
+| Provider | Per-key RPM | Keys | Combined RPM |
+|----------|-------------|------|--------------|
+| Groq | 30 | 3 | 90 |
+| Gemini | 15 | 3 | 45 |
+| Mistral | 5 | 3 | 15 |
+| Cerebras | 30 | 3 | 90 |
+| NVIDIA NIM | 40 | 3 | 120 |
+| **Total** | | | **~360 req/min** |
+
+That's ~360 requests/minute of free inference, including frontier models like Llama 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1. **All $0.**
+
+## Concurrency safety
+
+The killer detail: each upstream `Response` object is mapped to the tracking ID of the key that produced it via a `WeakMap<Response, string>`. When the router calls `provider.onRateLimit(response)`, the provider looks up the exact key from that WeakMap — so even with concurrent requests, a 429 on key #0 can never accidentally cool down key #1.
+
+## Per-key observability
+
+The `GET /v1/status` endpoint exposes per-key state for every provider:
+
+```json
+{
+  "id": "groq",
+  "keyCount": 4,
+  "keysAvailable": 4,
+  "keys": [
+    { "index": 0, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 },
+    { "index": 1, "rateLimited": false, "requestsInWindow": 11, "maxRequests": 28 },
+    { "index": 2, "rateLimited": true,  "requestsInWindow": 28, "maxRequests": 28, "retryAfterMs": 42000 },
+    { "index": 3, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 }
+  ]
+}
+```
+
+The dashboard surfaces this as a `keysAvailable / keyCount` badge on each provider card.
+
+## Ethical considerations
+
+Using multiple free-tier accounts may violate some providers' terms of service. **Check each provider's ToS before stacking keys.** FreeLLM is a tool — you're responsible for how you use it. For most personal/dev use cases, multiple personal accounts under different emails are fine.

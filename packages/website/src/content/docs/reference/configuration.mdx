@@ -1,0 +1,57 @@
+---
+title: Configuration
+description: All environment variables and defaults.
+---
+
+FreeLLM is configured entirely via environment variables. The full list with sensible defaults:
+
+## Provider API keys
+
+Each accepts a single key or a comma-separated list (see [Multi-Key Rotation](/features/multi-key/)).
+
+```bash
+GROQ_API_KEY=
+GEMINI_API_KEY=
+MISTRAL_API_KEY=
+CEREBRAS_API_KEY=
+NVIDIA_NIM_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+## Circuit breaker
+
+```bash
+CB_FAILURE_THRESHOLD=3       # consecutive failures before tripping open
+CB_SUCCESS_THRESHOLD=2       # successes in half-open to recover
+CB_TIMEOUT_MS=30000          # wait before half-open retry
+```
+
+## Routing timeout
+
+```bash
+ROUTE_TIMEOUT_MS=30000       # max time to try all providers before giving up
+```
+
+## Per-client rate limiting
+
+```bash
+RATE_LIMIT_RPM=60            # requests per IP per window
+RATE_LIMIT_WINDOW_MS=60000   # window size in ms
+```
+
+## Security
+
+```bash
+FREELLM_API_KEY=             # require Bearer token (timing-safe comparison)
+FREELLM_ADMIN_KEY=           # separate key for status mutations (reset, routing)
+ALLOWED_ORIGINS=             # comma-separated CORS origins
+```
+
+When `FREELLM_API_KEY` is empty, all requests pass through (good for local dev). When set, every non-health request must include `Authorization: Bearer <key>`.
+
+## Logging
+
+```bash
+LOG_LEVEL=info               # pino log level: trace, debug, info, warn, error
+NODE_ENV=development         # set to "production" on deployment
+```

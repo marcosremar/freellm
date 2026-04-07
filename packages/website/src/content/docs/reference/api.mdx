@@ -1,0 +1,64 @@
+---
+title: API Reference
+description: Complete reference for every FreeLLM endpoint.
+---
+
+FreeLLM exposes an **OpenAI-compatible API**. Use any OpenAI SDK by setting `base_url` to your gateway address. All endpoints are available at both `/v1/...` (direct) and `/api/v1/...` (proxied via the dashboard).
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/v1/chat/completions` | Chat completion (streaming and non-streaming) |
+| `GET` | `/v1/models` | List all available models + meta-models |
+| `GET` | `/v1/status` | Gateway health, provider states, per-key state, token usage, recent requests |
+| `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
+| `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` routing |
+| `GET` | `/healthz` | Simple health check (used by load balancers and Docker) |
+
+## Chat completion
+
+```bash
+POST /v1/chat/completions
+Content-Type: application/json
+
+{
+  "model": "free-fast",
+  "messages": [
+    {"role": "user", "content": "Hello!"}
+  ],
+  "stream": false,
+  "temperature": 0.7,
+  "max_tokens": 1024
+}
+```
+
+**Response shape:**
+
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "llama-3.3-70b-versatile",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "Hi there!" },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 5,
+    "total_tokens": 15
+  },
+  "x_freellm_provider": "groq"
+}
+```
+
+The `x_freellm_provider` field is FreeLLM-specific and tells you which upstream provider handled the request.
+
+## Status endpoint
+
+`GET /v1/status` returns the full gateway state including provider health, per-key rate-limit windows, token usage totals, and recent requests. See [Multi-Key Rotation](/features/multi-key/) and [Token Usage Tracking](/features/token-usage/) for examples of the response shape.
