@@ -2,6 +2,7 @@ import type { ProviderRegistry } from "./registry.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ChatCompletionRequest, ChatCompletionResponse, RoutingStrategy } from "./types.js";
 import { RequestLog } from "./request-log.js";
+import { UsageTracker } from "./usage-tracker.js";
 import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
 
 const ROUTE_TIMEOUT_MS = parseInt(process.env["ROUTE_TIMEOUT_MS"] ?? "30000", 10);
@@ -14,9 +15,11 @@ export class GatewayRouter {
 
   public strategy: RoutingStrategy = "round_robin";
   public requestLog: RequestLog;
+  public usageTracker: UsageTracker;
 
   constructor(private registry: ProviderRegistry) {
     this.requestLog = new RequestLog();
+    this.usageTracker = new UsageTracker();
   }
 
   private pickProvider(
@@ -151,6 +154,14 @@ export class GatewayRouter {
       const data = (await response.json()) as ChatCompletionResponse;
       data.x_freellm_provider = provider.id;
 
+      // Extract and record token usage when the provider returns it (all
+      // OpenAI-compatible providers do for non-streaming responses).
+      const promptTokens = data.usage?.prompt_tokens ?? 0;
+      const completionTokens = data.usage?.completion_tokens ?? 0;
+      if (promptTokens > 0 || completionTokens > 0) {
+        this.usageTracker.record(provider.id, promptTokens, completionTokens);
+      }
+
       this.requestLog.add({
         requestedModel: request.model,
         resolvedModel,
@@ -158,6 +169,8 @@ export class GatewayRouter {
         latencyMs,
         status: "success",
         streaming: false,
+        promptTokens: promptTokens || undefined,
+        completionTokens: completionTokens || undefined,
       });
 
       return data;

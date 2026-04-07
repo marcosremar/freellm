@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, Clock } from "lucide-react";
+import { AlertTriangle, RefreshCw, Clock, Key, Coins } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,14 @@ interface ProviderCardProps {
     failedRequests: number;
     lastError?: string | null;
     lastUsedAt?: string | null;
+    keyCount?: number;
+    keysAvailable?: number;
+    usage?: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      requestCount: number;
+    };
   };
   onReset: (providerId: string) => void;
   resetPending: boolean;
@@ -39,20 +47,45 @@ function getStatusText(state: string, enabled: boolean) {
   }
 }
 
+/** Compact number formatter: 1234 → "1.2K", 1500000 → "1.5M" */
+function formatCompact(n: number): string {
+  if (n < 1000) return n.toString();
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1)}K`;
+  if (n < 1_000_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  return `${(n / 1_000_000_000).toFixed(2)}B`;
+}
+
 export function ProviderCard({ provider, onReset, resetPending }: ProviderCardProps) {
   const showReset = provider.circuitBreakerState === "open" || provider.circuitBreakerState === "half_open";
+  const keyCount = provider.keyCount ?? 1;
+  const keysAvailable = provider.keysAvailable ?? keyCount;
+  const hasMultiKey = keyCount > 1;
+  const usage = provider.usage;
+  const hasTokens = usage && usage.totalTokens > 0;
 
   return (
     <Card className={cn("overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all", !provider.enabled && "opacity-60")}>
       <CardHeader className="pb-3 border-b border-border/30">
-        <div className="flex justify-between items-start">
-          <div>
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
             <CardTitle className="font-mono text-lg">{provider.name}</CardTitle>
             <CardDescription className="text-xs font-mono mt-1">{provider.id}</CardDescription>
           </div>
-          <Badge variant="outline" className={cn("uppercase text-[10px] tracking-wider", getStatusColor(provider.circuitBreakerState, provider.enabled))}>
-            {getStatusText(provider.circuitBreakerState, provider.enabled)}
-          </Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge variant="outline" className={cn("uppercase text-[10px] tracking-wider", getStatusColor(provider.circuitBreakerState, provider.enabled))}>
+              {getStatusText(provider.circuitBreakerState, provider.enabled)}
+            </Badge>
+            {hasMultiKey && (
+              <Badge
+                variant="outline"
+                className="uppercase text-[10px] tracking-wider bg-secondary/50 text-muted-foreground border-border/50 flex items-center gap-1"
+                title={`${keysAvailable}/${keyCount} keys available`}
+              >
+                <Key className="w-2.5 h-2.5" />
+                {keysAvailable}/{keyCount}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-4 space-y-4">
@@ -66,6 +99,20 @@ export function ProviderCard({ provider, onReset, resetPending }: ProviderCardPr
             <span className={cn("text-foreground", provider.failedRequests > 0 && "text-destructive")}>{provider.failedRequests}</span>
           </div>
         </div>
+
+        {hasTokens && usage && (
+          <div className="p-2 rounded-md border border-amber-500/20 bg-amber-500/5">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase text-amber-500/80 tracking-wider mb-1">
+              <Coins className="w-3 h-3" /> Tokens (24h)
+            </div>
+            <div className="font-mono text-sm text-amber-500">
+              {formatCompact(usage.totalTokens)}
+            </div>
+            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+              in {formatCompact(usage.promptTokens)} · out {formatCompact(usage.completionTokens)}
+            </div>
+          </div>
+        )}
 
         {provider.lastError && (
           <div className="p-2 rounded border border-destructive/20 bg-destructive/5 text-xs text-destructive flex items-start gap-2 overflow-hidden">

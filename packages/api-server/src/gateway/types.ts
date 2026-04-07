@@ -71,6 +71,15 @@ export interface RequestLogEntry {
   error?: string | null;
   timestamp: string;
   streaming: boolean;
+  promptTokens?: number;
+  completionTokens?: number;
+}
+
+export interface TokenUsageTotals {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  requestCount: number;
 }
 
 export interface GatewayStatus {
@@ -80,6 +89,7 @@ export interface GatewayStatus {
   failedRequests: number;
   providers: ProviderStatusInfo[];
   recentRequests: RequestLogEntry[];
+  usage: TokenUsageTotals;
 }
 
 export interface KeyStatus {
@@ -105,6 +115,7 @@ export interface ProviderStatusInfo {
   keyCount: number;
   keysAvailable: number;
   keys: KeyStatus[];
+  usage: TokenUsageTotals;
 }
 
 export interface GatewayError {

@@ -14,14 +14,16 @@ statusRouter.patch("/routing", adminAuth);
 statusRouter.get("/", (_req, res) => {
   const stats = gatewayRouter.requestLog.getStats();
   const recentRequests = gatewayRouter.requestLog.getRecent(50);
+  const { byProvider, gateway } = gatewayRouter.usageTracker.getAllTotals();
 
   res.json({
     routingStrategy: gatewayRouter.strategy,
     totalRequests: stats.totalRequests,
     successRequests: stats.successRequests,
     failedRequests: stats.failedRequests,
-    providers: registry.getStatusAll(),
+    providers: registry.getStatusAll(byProvider),
     recentRequests,
+    usage: gateway,
   });
 });
 
@@ -42,6 +44,7 @@ statusRouter.post("/providers/:providerId/reset", (req, res) => {
   provider.resetCircuitBreaker();
   const stats = provider.getStats();
   const keys = provider.getKeysStatus();
+  const usage = gatewayRouter.usageTracker.getTotals(provider.id);
 
   res.json({
     id: provider.id,
@@ -58,6 +61,7 @@ statusRouter.post("/providers/:providerId/reset", (req, res) => {
     keyCount: keys.length,
     keysAvailable: keys.filter((k) => !k.rateLimited).length,
     keys,
+    usage,
   });
 });
 
@@ -67,14 +71,16 @@ statusRouter.patch("/routing", validate(updateRoutingSchema), (req, res) => {
   gatewayRouter.strategy = strategy;
   const stats = gatewayRouter.requestLog.getStats();
   const recentRequests = gatewayRouter.requestLog.getRecent(50);
+  const { byProvider, gateway } = gatewayRouter.usageTracker.getAllTotals();
 
   res.json({
     routingStrategy: gatewayRouter.strategy,
     totalRequests: stats.totalRequests,
     successRequests: stats.successRequests,
     failedRequests: stats.failedRequests,
-    providers: registry.getStatusAll(),
+    providers: registry.getStatusAll(byProvider),
     recentRequests,
+    usage: gateway,
   });
 });
 

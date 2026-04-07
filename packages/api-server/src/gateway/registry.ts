@@ -5,8 +5,15 @@ import { CerebrasProvider } from "./providers/cerebras.js";
 import { OllamaProvider } from "./providers/ollama.js";
 import { NimProvider } from "./providers/nim.js";
 import type { ProviderAdapter } from "./providers/types.js";
-import type { ModelObject, ProviderStatusInfo, RoutingStrategy } from "./types.js";
+import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
+
+const EMPTY_USAGE: TokenUsageTotals = {
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+  requestCount: 0,
+};
 
 export class ProviderRegistry {
   private providers: ProviderAdapter[];
@@ -81,7 +88,9 @@ export class ProviderRegistry {
     return candidates[idx];
   }
 
-  getStatusAll(): ProviderStatusInfo[] {
+  getStatusAll(
+    usageByProvider: Record<string, TokenUsageTotals> = {},
+  ): ProviderStatusInfo[] {
     return this.providers.map((p) => {
       const stats = p.getStats();
       const keys = p.getKeysStatus();
@@ -100,6 +109,7 @@ export class ProviderRegistry {
         keyCount: keys.length,
         keysAvailable: keys.filter((k) => !k.rateLimited).length,
         keys,
+        usage: usageByProvider[p.id] ?? EMPTY_USAGE,
       };
     });
   }

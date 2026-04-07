@@ -11,6 +11,8 @@ interface RequestEntry {
   requestedModel: string;
   provider?: string | null;
   latencyMs: number;
+  promptTokens?: number;
+  completionTokens?: number;
 }
 
 interface RequestTableProps {
@@ -42,33 +44,46 @@ export function RequestTable({ requests }: RequestTableProps) {
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Provider</TableHead>
+                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground text-right">Tokens</TableHead>
                 <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground text-right">Latency</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!requests.length ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={5} className="text-center h-24 text-muted-foreground font-mono text-sm">
+                  <TableCell colSpan={6} className="text-center h-24 text-muted-foreground font-mono text-sm">
                     No requests yet. Waiting for traffic...
                   </TableCell>
                 </TableRow>
               ) : (
-                requests.map((req) => (
-                  <TableRow key={req.id} className="border-border/10 border-b hover:bg-secondary/30 transition-colors font-mono text-sm">
-                    <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
-                      {new Date(req.timestamp).toLocaleTimeString(undefined, { hour12: false, fractionalSecondDigits: 2 })}
-                    </TableCell>
-                    <TableCell><StatusBadge status={req.status} /></TableCell>
-                    <TableCell className="max-w-[150px] truncate" title={req.requestedModel}>{req.requestedModel}</TableCell>
-                    <TableCell className="text-muted-foreground">{req.provider || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <span className={cn("inline-flex items-center gap-1", req.latencyMs > 2000 ? "text-amber-500" : "text-muted-foreground")}>
-                        {req.latencyMs > 2000 && <Zap className="w-3 h-3" />}
-                        {req.latencyMs}ms
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
+                requests.map((req) => {
+                  const hasTokens = req.promptTokens != null || req.completionTokens != null;
+                  return (
+                    <TableRow key={req.id} className="border-border/10 border-b hover:bg-secondary/30 transition-colors font-mono text-sm">
+                      <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                        {new Date(req.timestamp).toLocaleTimeString(undefined, { hour12: false, fractionalSecondDigits: 2 })}
+                      </TableCell>
+                      <TableCell><StatusBadge status={req.status} /></TableCell>
+                      <TableCell className="max-w-[150px] truncate" title={req.requestedModel}>{req.requestedModel}</TableCell>
+                      <TableCell className="text-muted-foreground">{req.provider || "-"}</TableCell>
+                      <TableCell className="text-right text-xs whitespace-nowrap">
+                        {hasTokens ? (
+                          <span className="text-amber-500/80" title={`${req.promptTokens ?? 0} prompt → ${req.completionTokens ?? 0} completion`}>
+                            {req.promptTokens ?? 0}<span className="text-muted-foreground mx-0.5">→</span>{req.completionTokens ?? 0}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className={cn("inline-flex items-center gap-1", req.latencyMs > 2000 ? "text-amber-500" : "text-muted-foreground")}>
+                          {req.latencyMs > 2000 && <Zap className="w-3 h-3" />}
+                          {req.latencyMs}ms
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

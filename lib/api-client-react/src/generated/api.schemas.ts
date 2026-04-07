@@ -57,6 +57,21 @@ export interface ModelsResponse {
   data: ModelObject[];
 }
 
+export interface KeyStatus {
+  index: number;
+  rateLimited: boolean;
+  requestsInWindow: number;
+  maxRequests: number;
+  retryAfterMs: number | null;
+}
+
+export interface TokenUsageTotals {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  requestCount: number;
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
@@ -69,6 +84,10 @@ export interface ProviderStatus {
   lastError?: string | null;
   lastUsedAt?: string | null;
   models: string[];
+  keyCount: number;
+  keysAvailable: number;
+  keys: KeyStatus[];
+  usage: TokenUsageTotals;
 }
 
 export interface RequestLogEntry {
@@ -81,6 +100,8 @@ export interface RequestLogEntry {
   error?: string | null;
   timestamp: string;
   streaming: boolean;
+  promptTokens?: number;
+  completionTokens?: number;
 }
 
 export interface GatewayStatus {
@@ -90,6 +111,7 @@ export interface GatewayStatus {
   failedRequests: number;
   providers: ProviderStatus[];
   recentRequests: RequestLogEntry[];
+  usage: TokenUsageTotals;
 }
 
 export interface UpdateRoutingStrategyRequest {
