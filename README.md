@@ -3,7 +3,7 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.1.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.2.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
@@ -50,9 +50,11 @@ Your request goes to the fastest available provider. If that provider is rate-li
 - **One endpoint, any OpenAI SDK** -- swap your base URL, keep your existing code
 - **Automatic failover** -- Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
 - **Smart meta-models** -- `free-fast` for speed, `free-smart` for capability, `free` for maximum availability
+- **Multi-key rotation** -- stack multiple keys per provider to multiply your free capacity (`GROQ_API_KEY=k1,k2,k3`)
+- **Token usage tracking** -- rolling 24h token counts per provider so you always know how much of your free budget is left
 - **Built-in rate-limit tracking** -- FreeLLM knows each provider's limits and avoids hitting them
 - **Circuit breakers** -- failing providers get taken out of rotation and tested for recovery automatically
-- **Real-time dashboard** -- see provider health, request logs, and latency at a glance
+- **Real-time dashboard** -- provider health, live request log, latency, and token usage at a glance
 - **Zero cost** -- every provider runs on its free tier
 
 ## Supported Providers
@@ -254,6 +256,53 @@ you get ~360 req/min of free inference, including frontier models like Llama
 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1. No other LLM gateway does this
 because they all assume you pay per token.
 
+### Token usage tracking
+
+Free tiers don't just have RPM limits — they have **daily token caps** (Groq:
+500K/day, Gemini: 1M/day, etc.). FreeLLM tracks every successful request's
+`prompt_tokens` and `completion_tokens` against a rolling 24-hour window, per
+provider, so you always know how much of your free budget is left.
+
+The tracker uses hourly buckets internally (24 max per provider, ~576 bytes
+total) — O(1) writes, O(24) reads, no external dependencies.
+
+**`GET /v1/status` returns per-provider and gateway-wide token totals:**
+
+```json
+{
+  "totalRequests": 87,
+  "successRequests": 85,
+  "failedRequests": 2,
+  "usage": {
+    "promptTokens": 142560,
+    "completionTokens": 38912,
+    "totalTokens": 181472,
+    "requestCount": 85
+  },
+  "providers": [
+    {
+      "id": "groq",
+      "usage": {
+        "promptTokens": 78000,
+        "completionTokens": 19200,
+        "totalTokens": 97200,
+        "requestCount": 42
+      }
+    }
+  ]
+}
+```
+
+**The dashboard surfaces it in three places:**
+
+- **Top metrics row** — gateway-wide "Tokens (24h)" card with compact formatting (1234 → "1.2K", 1.5M → "1.50M")
+- **Provider cards** — per-provider amber "TOKENS (24H)" block showing total + `in X · out Y` breakdown for prompt vs completion
+- **Recent requests table** — new "Tokens" column showing `prompt → completion` per request
+
+**Note:** streaming responses currently don't track tokens because the OpenAI
+SSE protocol doesn't guarantee a final `usage` chunk. This will be addressed in
+a future release.
+
 ### Request Lifecycle
 
 The complete journey of a request through the gateway:
@@ -386,7 +435,7 @@ Fully OpenAI-compatible. Available at `/v1/...` (direct) and `/api/v1/...` (prox
 |--------|----------|-------------|
 | `POST` | `/v1/chat/completions` | Chat completion (streaming and non-streaming) |
 | `GET` | `/v1/models` | List all available models + meta-models |
-| `GET` | `/v1/status` | Gateway health, provider states, recent requests |
+| `GET` | `/v1/status` | Gateway health, provider states, per-key state, token usage, recent requests |
 | `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
 | `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` |
 
@@ -397,7 +446,9 @@ Every response includes an `x_freellm_provider` header so you know which provide
 A built-in web UI for monitoring your gateway in real time:
 
 - **Provider health** -- see which providers are healthy, rate-limited, or failing
-- **Live request log** -- every request with its model, provider, latency, and status
+- **Token usage** -- 4-card metrics row + per-provider amber "Tokens (24h)" blocks with prompt/completion breakdown
+- **Multi-key status** -- providers with stacked keys show a `keysAvailable / keyCount` badge
+- **Live request log** -- every request with model, provider, latency, status, and token counts
 - **Routing controls** -- switch strategies without restarting the server
 - **Circuit breaker management** -- manually reset a tripped provider when you know it's back
 
