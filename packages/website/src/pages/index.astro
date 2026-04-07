@@ -2,6 +2,7 @@
 import "../styles/theme.css";
 import "../styles/landing.css";
 import Hero from "../components/hero.astro";
+import StatsBar from "../components/stats-bar.astro";
 import FeatureGrid from "../components/feature-grid.astro";
 import ProviderShowcase from "../components/provider-showcase.astro";
 import CodeTabs from "../components/code-tabs.astro";
@@ -35,14 +36,15 @@ import LandingFooter from "../components/landing-footer.astro";
     <LandingHeader />
     <main>
       <Hero />
+      <StatsBar />
       <FeatureGrid />
       <ProviderShowcase />
       <CodeTabs />
       <ComparisonTable />
       <section class="cta">
         <div class="container">
-          <h2>Deploy your gateway in 2 minutes</h2>
-          <p>One-click deploy to Railway or Render — bring your own free-tier API keys.</p>
+          <h2>Stop paying for LLMs you don't need</h2>
+          <p>One-click deploy to Railway or Render. Bring your own free-tier API keys. Live in 2 minutes.</p>
           <DeployButtons />
         </div>
       </section>

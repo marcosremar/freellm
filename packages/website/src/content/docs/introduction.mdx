@@ -1,28 +1,36 @@
 ---
 title: Introduction
-description: Learn what FreeLLM is and why it exists.
+description: Stop juggling API keys. FreeLLM is an OpenAI-compatible gateway across 6 free LLM providers.
 ---
 
-**FreeLLM** is an OpenAI-compatible gateway that aggregates **6 free LLM providers** (Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama) into a single, reliable API with automatic failover, multi-key rotation, and a real-time dashboard.
+**FreeLLM** is an OpenAI-compatible gateway that aggregates **6 free LLM providers** — Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama — into a single, reliable API with automatic failover, multi-key rotation, and a real-time dashboard.
 
-## The problem it solves
+![FreeLLM dashboard showing live request tracking across 6 LLM providers](/dashboard-demo.gif)
 
-You want to use LLMs in your project without paying. Every major provider offers a free tier — but each comes with its own SDK, its own rate limits, and its own downtime. You end up writing provider-switching logic, handling 429s, and babysitting API keys across five different dashboards.
+## The problem
 
-**FreeLLM fixes this.** Drop in one base URL and your existing OpenAI SDK works against six providers with zero code changes.
+You want to use LLMs without paying. Every major provider offers a free tier — but each one has its own SDK, its own rate limits, and its own downtime. You end up writing provider-switching logic, handling 429s, and babysitting API keys across five dashboards.
+
+**FreeLLM fixes this in one line.** Change your base URL. Your existing OpenAI SDK code works against six providers with zero changes.
+
+```python
+client = OpenAI(base_url="http://localhost:3000/v1", api_key="unused")
+```
+
+That's the entire migration.
 
 ## What you get
 
 - **One endpoint, any OpenAI SDK** — swap your base URL, keep your existing code
 - **Automatic failover** — Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
-- **Multi-key rotation** — stack multiple keys per provider to multiply your free capacity
+- **Multi-key rotation** — stack `GROQ_API_KEY=k1,k2,k3` to triple your free capacity
 - **Token usage tracking** — rolling 24h token counts per provider so you always know how much of your free budget is left
 - **Smart meta-models** — `free-fast` for speed, `free-smart` for capability, `free` for max uptime
 - **Built-in real-time dashboard** — provider health, live request log, latency, and token usage
 - **Circuit breakers** — failing providers get taken out of rotation and tested for recovery automatically
-- **Zero cost** — every provider runs on its free tier
+- **Truly $0** — no markup, no subscription, no surprise bills
 
-## Where to next
+## Where to go next
 
 - **[Quickstart](/quickstart/)** — deploy your gateway in 2 minutes
 - **[Multi-Key Rotation](/features/multi-key/)** — the killer feature: stack free tiers

@@ -1,0 +1,22 @@
+---
+const stats = [
+  { value: "6", label: "Providers" },
+  { value: "25+", label: "Models" },
+  { value: "360", label: "Req/min, free", note: "with 3 keys/provider" },
+  { value: "$0", label: "Forever" },
+];
+---
+
+<section class="stats-bar">
+  <div class="container">
+    <div class="stats-grid">
+      {stats.map((s) => (
+        <div class="stat">
+          <div class="stat-value">{s.value}</div>
+          <div class="stat-label">{s.label}</div>
+          {s.note && <div class="stat-note">{s.note}</div>}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

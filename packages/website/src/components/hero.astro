@@ -3,17 +3,22 @@
 
 <section class="hero">
   <div class="container">
-    <span class="badge">v1.2.0 · 6 providers · 25+ models · $0</span>
+    <span class="badge">
+      <span class="badge-dot"></span>
+      v1.2.0 — Multi-key rotation + token tracking
+    </span>
     <h1>Stop juggling API keys.<br />Start shipping.</h1>
     <p class="subtitle">
-      FreeLLM is an OpenAI-compatible gateway that routes your requests across
-      <span class="accent">Groq, Gemini, Mistral, Cerebras, NVIDIA NIM,</span> and
-      <span class="accent">Ollama</span> — so you never hit a rate limit again.
-      Stack multiple keys per provider to multiply your free capacity.
+      One <span class="accent">OpenAI-compatible</span> endpoint. Six free LLM providers.
+      Automatic failover when any of them runs out.
+      Stack multiple keys per provider to <span class="accent">3× your free capacity</span>.
     </p>
     <div class="cta-row">
       <a href="/quickstart/" class="btn btn-primary">
-        Get Started →
+        Deploy in 2 minutes
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+        </svg>
       </a>
       <a
         href="https://github.com/Devansh-365/freellm"
@@ -21,13 +26,24 @@
         rel="noopener"
         class="btn btn-secondary"
       >
-        View on GitHub
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.69-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.16 1.17.92-.26 1.9-.38 2.88-.39.98.01 1.96.13 2.88.39 2.2-1.48 3.16-1.17 3.16-1.17.62 1.59.23 2.76.11 3.05.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.36-5.25 5.65.41.36.78 1.06.78 2.13 0 1.54-.01 2.78-.01 3.16 0 .31.21.68.8.56 4.56-1.52 7.85-5.82 7.85-10.9C23.5 5.65 18.35.5 12 .5Z"/>
+        </svg>
+        Star on GitHub
       </a>
+    </div>
+    <div class="hero-meta">
+      <span>MIT licensed</span>
+      <span class="dot">·</span>
+      <span>No credit card</span>
+      <span class="dot">·</span>
+      <span>Self-hosted</span>
     </div>
     <div class="demo-frame">
       <img
         src="/dashboard-demo.gif"
         alt="FreeLLM dashboard showing live request tracking across 6 LLM providers"
+        loading="eager"
       />
     </div>
   </div>

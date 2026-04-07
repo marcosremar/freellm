@@ -1,58 +1,60 @@
 ---
+// Lucide-style 24×24 SVG icons (no emojis — proper UI iconography)
 const features = [
   {
-    icon: "↔",
     title: "OpenAI-compatible",
-    desc: "Drop-in replacement. Swap your base URL, keep all your existing OpenAI SDK code unchanged.",
+    desc: "Drop-in replacement. Change one line — your base URL — and your existing OpenAI SDK code keeps working.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><circle cx="12" cy="12" r="3"/></svg>`,
   },
   {
-    icon: "⚡",
     title: "Automatic failover",
-    desc: "When Groq is rate-limited, FreeLLM silently routes to Gemini, then Mistral, then Cerebras. You always get a response.",
+    desc: "Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras. You always get a response.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   },
   {
-    icon: "🔑",
     title: "Multi-key rotation",
-    desc: "Stack multiple API keys per provider with comma-separated env vars. Triple your free-tier capacity in 10 seconds.",
+    desc: "Set GROQ_API_KEY=k1,k2,k3 and stack multiple keys per provider. Each key gets its own rate-limit budget.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>`,
   },
   {
-    icon: "📊",
     title: "Token usage tracking",
     desc: "Rolling 24-hour token counts per provider. Always know how much of your free budget is left.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>`,
   },
   {
-    icon: "🛡",
     title: "Circuit breakers",
-    desc: "Per-provider health tracking with three states (closed, open, half-open). Cascading failures stay contained.",
+    desc: "Per-provider health tracking with three states. Cascading failures stay contained, recovery is automatic.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`,
   },
   {
-    icon: "🎯",
     title: "Smart meta-models",
     desc: "Pick a strategy, not a provider. Use free-fast for speed, free-smart for capability, or free for max uptime.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
   },
   {
-    icon: "📈",
     title: "Real-time dashboard",
     desc: "Built-in React dashboard shows provider health, live request log, latency, and token usage at a glance.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16V8"/><path d="M11 16V11"/><path d="M15 16V13"/><path d="M19 16V6"/></svg>`,
   },
   {
-    icon: "💰",
-    title: "Zero cost",
-    desc: "Every provider runs on its free tier. No markups, no subscriptions, no surprises. Self-host in 2 minutes.",
+    title: "Truly $0",
+    desc: "Every provider runs on its free tier. No markup, no subscription, no surprise bills. Self-host in 2 minutes.",
+    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
   },
 ];
 ---
 
 <section class="section">
   <div class="container">
-    <h2>Everything you need to manage free LLM APIs</h2>
+    <h2>Everything you need to run LLMs for free</h2>
     <p class="lead">
-      Production-quality routing, observability, and reliability — built specifically for free-tier providers.
+      Production-grade routing, observability, and reliability — built specifically
+      for free-tier providers. Not a generic gateway with free tier as an afterthought.
     </p>
     <div class="feature-grid">
       {features.map((f) => (
         <div class="feature-card">
-          <div class="icon">{f.icon}</div>
+          <div class="icon" set:html={f.icon} />
           <h3>{f.title}</h3>
           <p>{f.desc}</p>
         </div>
