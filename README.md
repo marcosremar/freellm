@@ -23,6 +23,7 @@ Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate 
 
 ### Deploy in one click
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/_0jAQr?referralCode=3z4ZBN&utm_medium=integration&utm_source=template&utm_campaign=generic)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
 
 </div>
@@ -68,18 +69,11 @@ Your request goes to the fastest available provider. If that provider is rate-li
 
 ## Quickstart
 
-### Option A: Cloud deploy
+### Option A: One-click cloud deploy
 
-**Render** (one-click, reads `render.yaml` automatically):
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/_0jAQr?referralCode=3z4ZBN&utm_medium=integration&utm_source=template&utm_campaign=generic) &nbsp; [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
-
-**Railway** (3 steps):
-1. Open [railway.com/new](https://railway.com/new) → click **Deploy from GitHub repo**
-2. Select your fork of `freellm` (or use `Devansh-365/freellm` directly)
-3. Add your provider API keys under the service's **Variables** tab
-
-Both platforms read the included config files (`render.yaml`, `railway.json`) and the `Dockerfile` automatically. Your gateway is live in under 2 minutes -- no clone, no Docker, no terminal.
+Click a button above, sign in, and add your provider API keys. Your gateway is live in under 2 minutes -- no clone, no Docker, no terminal.
 
 ### Option B: Docker
 
