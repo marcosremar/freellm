@@ -3,6 +3,7 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.1.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
@@ -14,6 +15,9 @@
 One endpoint, 6 providers, 25+ models -- all free.
 FreeLLM is an OpenAI-compatible gateway that routes your requests across
 Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate limit again.
+
+**Stack multiple keys per provider to multiply your free capacity.**
+Set `GROQ_API_KEY=key1,key2,key3` and get 3× the free-tier RPM.
 
 [Quickstart](#quickstart) · [How It Works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard) · [Architecture](#architecture)
 
@@ -53,8 +57,8 @@ Your request goes to the fastest available provider. If that provider is rate-li
 
 ## Supported Providers
 
-| Provider | Models | Free Tier | Why It's Here |
-|----------|--------|-----------|---------------|
+| Provider | Models | Free Tier (per key) | Why It's Here |
+|----------|--------|--------------------|----------------|
 | **Groq** | Llama 3.3 70B, Llama 3.1 8B, Llama 4 Scout, Qwen3 32B | ~30 req/min | Fastest inference available |
 | **Gemini** | Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite | ~15 req/min | Most capable free models |
 | **Mistral** | Mistral Small, Mistral Medium, Mistral Nemo | ~5 req/min | Strong reasoning at low cost |
@@ -62,7 +66,8 @@ Your request goes to the fastest available provider. If that provider is rate-li
 | **NVIDIA NIM** | Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, Mixtral 8x22B, DeepSeek R1 | ~40 req/min | Frontier models on DGX Cloud |
 | **Ollama** | Any local model | Unlimited | Your hardware, your rules |
 
-**Combined free capacity: ~120 requests/minute** across all cloud providers -- enough for prototyping, internal tools, and side projects.
+**Baseline combined capacity: ~120 req/min** across all cloud providers with one key each.
+**With multi-key stacking (3 keys per provider): ~360 req/min.** All $0.
 
 > Get free API keys from each provider:
 > [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com)
@@ -125,6 +130,12 @@ GEMINI_API_KEY=AI...
 MISTRAL_API_KEY=...
 CEREBRAS_API_KEY=...
 NVIDIA_NIM_API_KEY=nvapi-...
+```
+
+**Pro tip:** stack multiple keys per provider (comma-separated) to multiply your free-tier capacity. Each key gets its own independent rate-limit budget:
+
+```env
+GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3   # 3× the Groq free-tier RPM
 ```
 
 #### 3. Start
@@ -199,6 +210,49 @@ nim/meta/llama-3.3-70b-instruct
 nim/nvidia/llama-3.1-nemotron-70b-instruct
 nim/deepseek-ai/deepseek-r1
 ```
+
+### Multi-key rotation (stack your free tiers)
+
+Every provider env var accepts a comma-separated list of API keys. FreeLLM
+rotates through them round-robin, and each key gets its own independent
+rate-limit budget and cooldown state.
+
+```env
+# Single key (works as before)
+GROQ_API_KEY=gsk_key1
+
+# Four keys -- 4× the free-tier capacity
+GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4
+```
+
+**How it works:**
+
+- **Round-robin rotation** — concurrent requests spread across keys automatically
+- **Per-key rate limiting** — when `key1` hits its sliding window, FreeLLM silently uses `key2`, `key3`, `key4`
+- **Per-key cooldowns** — a 429 on one key only sidelines *that* key, not the whole provider
+- **All-keys-exhausted failover** — only when every key is rate-limited does the router move on to the next provider
+- **Concurrency-safe** — each upstream response is mapped to the exact key that produced it via `WeakMap`, so 429s can never be misattributed under load
+
+**The `GET /v1/status` endpoint shows per-key state:**
+
+```json
+{
+  "id": "groq",
+  "keyCount": 4,
+  "keysAvailable": 4,
+  "keys": [
+    { "index": 0, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 },
+    { "index": 1, "rateLimited": false, "requestsInWindow": 11, "maxRequests": 28 },
+    { "index": 2, "rateLimited": true,  "requestsInWindow": 28, "maxRequests": 28, "retryAfterMs": 42000 },
+    { "index": 3, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 }
+  ]
+}
+```
+
+**Real-world math:** stack 3 keys per provider across all 5 cloud providers and
+you get ~360 req/min of free inference, including frontier models like Llama
+3.3 70B, Gemini 2.5 Pro, and DeepSeek R1. No other LLM gateway does this
+because they all assume you pay per token.
 
 ### Request Lifecycle
 

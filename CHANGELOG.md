@@ -5,6 +5,62 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-08
+
+Multi-key capacity stacking — the feature that makes FreeLLM structurally
+different from every other LLM gateway. Every provider env var now accepts a
+comma-separated list of API keys, and FreeLLM rotates through them with
+independent per-key rate-limit budgets.
+
+### Added
+
+#### Multi-key rotation
+- Provider env vars now accept comma-separated keys:
+  `GROQ_API_KEY=key1,key2,key3` → ~84 req/min on Groq instead of 28
+- Each key gets its own sliding-window rate-limit budget and cooldown state
+- Round-robin rotation via `keyRotationIndex` advanced synchronously so
+  concurrent requests spread across keys
+- `isAvailable()` returns true when **any** key is not rate-limited —
+  a single 429'd key no longer disables the whole provider
+- Router only excludes a provider when **all** its keys are exhausted,
+  so the next failover attempt can retry the same provider with a different key
+- Circuit breaker stays provider-level (a broken baseURL affects all keys equally)
+
+#### Per-key observability
+- `GET /v1/status` now returns per-provider `keyCount`, `keysAvailable`, and
+  a `keys[]` array with per-key sliding-window state
+- `POST /v1/status/providers/{id}/reset` clears cooldowns on **all** keys
+
+### Changed
+
+- `ProviderAdapter.onSuccess` / `onRateLimit` now take the `Response` object
+  so the provider can attribute events to the exact key that produced them
+  via `WeakMap<Response, string>` — concurrency-safe with no race conditions
+- `RateLimiter` API now keyed by tracking ID (`providerId` or `providerId#N`)
+  rather than bare provider ID. Provider ID is extracted internally for
+  config lookup, so the sliding-window config remains per-provider.
+- Ollama uses a sentinel `["ollama"]` key to fit the uniform multi-key flow
+
+### Migration
+
+Fully backward compatible. Single-key configs work unchanged. To benefit from
+key stacking, update any provider env var to comma-separated form:
+
+```env
+# Before
+GROQ_API_KEY=gsk_single_key
+
+# After (same behavior, still works)
+GROQ_API_KEY=gsk_single_key
+
+# After (4x free capacity)
+GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4
+```
+
+[1.1.0]: https://github.com/Devansh-365/freellm/releases/tag/v1.1.0
+
+---
+
 ## [1.0.0] - 2026-04-08
 
 First stable release. Production-ready OpenAI-compatible gateway aggregating
