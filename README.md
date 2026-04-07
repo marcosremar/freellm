@@ -20,6 +20,11 @@ Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate 
 
 ![FreeLLM Dashboard](docs/screenshots/dashboard-demo.gif)
 
+### Deploy in one click
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FDevansh-365%2Ffreellm)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
+
 </div>
 
 ## The Problem
@@ -63,10 +68,16 @@ Your request goes to the fastest available provider. If that provider is rate-li
 
 ## Quickstart
 
-### Option A: Docker (recommended)
+### Option A: One-click cloud deploy
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https%3A%2F%2Fgithub.com%2FDevansh-365%2Ffreellm) &nbsp; [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
+
+Click a button above, sign in, and add your provider API keys in the dashboard. Your gateway is live in under 2 minutes -- no clone, no Docker, no terminal.
+
+### Option B: Docker
 
 ```bash
-git clone https://github.com/devanshtiwari/freellm.git
+git clone https://github.com/Devansh-365/freellm.git
 cd freellm
 cp .env.example .env        # add your API keys
 docker compose up
@@ -74,12 +85,12 @@ docker compose up
 
 API runs on `http://localhost:3000`. Done.
 
-### Option B: Local
+### Option C: Local development
 
 #### 1. Clone and install
 
 ```bash
-git clone https://github.com/devanshtiwari/freellm.git
+git clone https://github.com/Devansh-365/freellm.git
 cd freellm
 pnpm install
 ```

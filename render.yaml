@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: freellm
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Provider API keys -- set these in the Render dashboard after deploy
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: NVIDIA_NIM_API_KEY
+        sync: false
+      # Optional security settings
+      - key: FREELLM_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
