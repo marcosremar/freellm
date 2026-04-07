@@ -3,6 +3,7 @@ import type { ProviderAdapter } from "./providers/types.js";
 import type { ChatCompletionRequest, ChatCompletionResponse, RoutingStrategy } from "./types.js";
 import { RequestLog } from "./request-log.js";
 import { UsageTracker } from "./usage-tracker.js";
+import { ResponseCache } from "./cache.js";
 import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
 
 const ROUTE_TIMEOUT_MS = parseInt(process.env["ROUTE_TIMEOUT_MS"] ?? "30000", 10);
@@ -16,10 +17,12 @@ export class GatewayRouter {
   public strategy: RoutingStrategy = "round_robin";
   public requestLog: RequestLog;
   public usageTracker: UsageTracker;
+  public cache: ResponseCache;
 
   constructor(private registry: ProviderRegistry) {
     this.requestLog = new RequestLog();
     this.usageTracker = new UsageTracker();
+    this.cache = new ResponseCache();
   }
 
   private pickProvider(
@@ -147,6 +150,32 @@ export class GatewayRouter {
   async complete(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
     const startTime = Date.now();
 
+    // Cache check FIRST. Hits short-circuit the entire routing flow:
+    // no provider call, no token quota burn, ~0ms latency.
+    const cached = this.cache.get(request);
+    if (cached) {
+      const latencyMs = Date.now() - startTime;
+      const data: ChatCompletionResponse = {
+        ...cached.response,
+        x_freellm_provider: cached.provider,
+        x_freellm_cached: true,
+      };
+
+      this.requestLog.add({
+        requestedModel: request.model,
+        resolvedModel: cached.response.model,
+        provider: cached.provider,
+        latencyMs,
+        status: "success",
+        streaming: false,
+        promptTokens: cached.promptTokens || undefined,
+        completionTokens: cached.completionTokens || undefined,
+        cached: true,
+      });
+
+      return data;
+    }
+
     try {
       const { response, provider, resolvedModel } = await this.route(request);
       const latencyMs = Date.now() - startTime;
@@ -172,6 +201,10 @@ export class GatewayRouter {
         promptTokens: promptTokens || undefined,
         completionTokens: completionTokens || undefined,
       });
+
+      // Store in cache for future identical requests.
+      // The cache class skips streaming and disabled state internally.
+      this.cache.set(request, data, provider.id, promptTokens, completionTokens);
 
       return data;
     } catch (err) {

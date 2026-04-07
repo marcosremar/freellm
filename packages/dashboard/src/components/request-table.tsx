@@ -13,6 +13,7 @@ interface RequestEntry {
   latencyMs: number;
   promptTokens?: number;
   completionTokens?: number;
+  cached?: boolean;
 }
 
 interface RequestTableProps {
@@ -63,7 +64,14 @@ export function RequestTable({ requests }: RequestTableProps) {
                       <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
                         {new Date(req.timestamp).toLocaleTimeString(undefined, { hour12: false, fractionalSecondDigits: 2 })}
                       </TableCell>
-                      <TableCell><StatusBadge status={req.status} /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <StatusBadge status={req.status} />
+                          {req.cached && (
+                            <Badge variant="outline" className="bg-cyan-400/5 text-cyan-400 border-cyan-400/20 text-[10px] uppercase rounded-sm font-normal py-0" title="Served from cache (no provider call)">CACHE</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="max-w-[150px] truncate" title={req.requestedModel}>{req.requestedModel}</TableCell>
                       <TableCell className="text-muted-foreground">{req.provider || "-"}</TableCell>
                       <TableCell className="text-right text-xs whitespace-nowrap">

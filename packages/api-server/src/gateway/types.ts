@@ -42,6 +42,7 @@ export interface ChatCompletionResponse {
   choices: ChatCompletionChoice[];
   usage?: ChatCompletionUsage;
   x_freellm_provider?: string;
+  x_freellm_cached?: boolean;
 }
 
 export interface ModelObject {
@@ -73,6 +74,7 @@ export interface RequestLogEntry {
   streaming: boolean;
   promptTokens?: number;
   completionTokens?: number;
+  cached?: boolean;
 }
 
 export interface TokenUsageTotals {
@@ -80,6 +82,18 @@ export interface TokenUsageTotals {
   completionTokens: number;
   totalTokens: number;
   requestCount: number;
+}
+
+export interface CacheStats {
+  enabled: boolean;
+  ttlMs: number;
+  maxEntries: number;
+  currentSize: number;
+  hits: number;
+  misses: number;
+  sets: number;
+  evictions: number;
+  hitRate: number;
 }
 
 export interface GatewayStatus {
@@ -90,6 +104,7 @@ export interface GatewayStatus {
   providers: ProviderStatusInfo[];
   recentRequests: RequestLogEntry[];
   usage: TokenUsageTotals;
+  cache: CacheStats;
 }
 
 export interface KeyStatus {

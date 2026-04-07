@@ -15,6 +15,7 @@ statusRouter.get("/", (_req, res) => {
   const stats = gatewayRouter.requestLog.getStats();
   const recentRequests = gatewayRouter.requestLog.getRecent(50);
   const { byProvider, gateway } = gatewayRouter.usageTracker.getAllTotals();
+  const cacheStats = gatewayRouter.cache.getStats();
 
   res.json({
     routingStrategy: gatewayRouter.strategy,
@@ -24,6 +25,7 @@ statusRouter.get("/", (_req, res) => {
     providers: registry.getStatusAll(byProvider),
     recentRequests,
     usage: gateway,
+    cache: cacheStats,
   });
 });
 
@@ -72,6 +74,7 @@ statusRouter.patch("/routing", validate(updateRoutingSchema), (req, res) => {
   const stats = gatewayRouter.requestLog.getStats();
   const recentRequests = gatewayRouter.requestLog.getRecent(50);
   const { byProvider, gateway } = gatewayRouter.usageTracker.getAllTotals();
+  const cacheStats = gatewayRouter.cache.getStats();
 
   res.json({
     routingStrategy: gatewayRouter.strategy,
@@ -81,6 +84,7 @@ statusRouter.patch("/routing", validate(updateRoutingSchema), (req, res) => {
     providers: registry.getStatusAll(byProvider),
     recentRequests,
     usage: gateway,
+    cache: cacheStats,
   });
 });
 

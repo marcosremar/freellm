@@ -63,6 +63,8 @@ export default function Dashboard() {
         success={status?.successRequests ?? 0}
         failed={status?.failedRequests ?? 0}
         tokens={status?.usage?.totalTokens ?? 0}
+        cacheHits={status?.cache?.hits ?? 0}
+        cacheHitRate={status?.cache?.hitRate ?? 0}
       />
 
       <div>
