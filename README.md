@@ -5,6 +5,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
 
@@ -75,6 +76,21 @@ Your request goes to the fastest available provider. If that provider is rate-li
 Click a button above, sign in, and add your provider API keys in the dashboard. Your gateway is live in under 2 minutes -- no clone, no Docker, no terminal.
 
 ### Option B: Docker
+
+**Pull the prebuilt image** (no clone needed):
+
+```bash
+docker run -d -p 3000:3000 \
+  -e GROQ_API_KEY=gsk_... \
+  -e GEMINI_API_KEY=AI... \
+  -e MISTRAL_API_KEY=... \
+  -e CEREBRAS_API_KEY=... \
+  -e NVIDIA_NIM_API_KEY=nvapi-... \
+  --name freellm \
+  ghcr.io/devansh-365/freellm:latest
+```
+
+**Or clone and use docker-compose:**
 
 ```bash
 git clone https://github.com/Devansh-365/freellm.git
