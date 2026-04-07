@@ -1,4 +1,4 @@
-import { BaseProvider } from "./base.js";
+import { BaseProvider, parseApiKeys } from "./base.js";
 import type { ModelObject } from "../types.js";
 
 export class GeminiProvider extends BaseProvider {
@@ -13,9 +13,7 @@ export class GeminiProvider extends BaseProvider {
     { id: "gemini/gemini-2.0-flash-lite", object: "model", created: 1700000000, owned_by: "google", provider: "gemini" },
   ];
 
-  protected getApiKey(): string | undefined {
-    return process.env["GEMINI_API_KEY"];
+  protected getApiKeys(): string[] {
+    return parseApiKeys(process.env["GEMINI_API_KEY"]);
   }
-
-
 }

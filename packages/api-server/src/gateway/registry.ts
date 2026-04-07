@@ -84,6 +84,7 @@ export class ProviderRegistry {
   getStatusAll(): ProviderStatusInfo[] {
     return this.providers.map((p) => {
       const stats = p.getStats();
+      const keys = p.getKeysStatus();
       return {
         id: p.id,
         name: p.name,
@@ -96,6 +97,9 @@ export class ProviderRegistry {
         lastError: stats.lastError ?? null,
         lastUsedAt: stats.lastUsedAt ?? null,
         models: p.models.map((m) => m.id),
+        keyCount: keys.length,
+        keysAvailable: keys.filter((k) => !k.rateLimited).length,
+        keys,
       };
     });
   }

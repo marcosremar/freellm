@@ -3,13 +3,14 @@ export interface WindowConfig {
   maxRequests: number;
 }
 
-// Conservative free-tier defaults per provider (kept below actual limits to avoid hard 429s)
+// Conservative free-tier defaults per provider (kept below actual limits to avoid hard 429s).
+// These limits apply PER KEY when multiple API keys are configured for a provider.
 const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
-  groq:     { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free
-  gemini:   { windowMs: 60_000, maxRequests: 13 },  // ~15 RPM free
-  mistral:  { windowMs: 60_000, maxRequests:  4 },  // ~5 RPM free
-  cerebras: { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free
-  nim:      { windowMs: 60_000, maxRequests: 38 },  // ~40 RPM free (1k credits/account)
+  groq:     { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
+  gemini:   { windowMs: 60_000, maxRequests: 13 },  // ~15 RPM free per key
+  mistral:  { windowMs: 60_000, maxRequests:  4 },  // ~5 RPM free per key
+  cerebras: { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
+  nim:      { windowMs: 60_000, maxRequests: 38 },  // ~40 RPM free per key
   ollama:   { windowMs: 60_000, maxRequests: 999 }, // local — effectively unlimited
 };
 
@@ -19,68 +20,75 @@ interface CooldownEntry {
   blockedUntil: number;
 }
 
+/**
+ * Extract the provider ID from a tracking ID.
+ * Tracking IDs are either bare provider IDs ("groq") or composites ("groq#0", "groq#1").
+ * The config is always looked up by the bare provider ID.
+ */
+function getProviderId(trackingId: string): string {
+  const hashIdx = trackingId.indexOf("#");
+  return hashIdx === -1 ? trackingId : trackingId.substring(0, hashIdx);
+}
+
 export class RateLimiter {
   private cooldowns = new Map<string, CooldownEntry>();
-  private windows = new Map<string, number[]>(); // per-provider request timestamps
+  private windows = new Map<string, number[]>(); // per-key request timestamps
 
-  /** Call this every time a request is dispatched to a provider. */
-  recordRequest(providerId: string): void {
+  /** Call every time a request is dispatched to a specific key. */
+  recordRequest(trackingId: string): void {
     const now = Date.now();
-    const cfg = PROVIDER_WINDOW_CONFIGS[providerId] ?? FALLBACK_CONFIG;
-    const existing = this.windows.get(providerId) ?? [];
-    // Evict expired timestamps then append
+    const cfg = PROVIDER_WINDOW_CONFIGS[getProviderId(trackingId)] ?? FALLBACK_CONFIG;
+    const existing = this.windows.get(trackingId) ?? [];
     const fresh = existing.filter((t) => now - t < cfg.windowMs);
     fresh.push(now);
-    this.windows.set(providerId, fresh);
+    this.windows.set(trackingId, fresh);
   }
 
-  /** Returns true if the provider should be skipped (cooldown OR window full). */
-  isRateLimited(providerId: string): boolean {
-    // 1. Hard cooldown from an upstream 429
-    const cooldown = this.cooldowns.get(providerId);
+  /** Returns true if the key should be skipped (cooldown OR window full). */
+  isRateLimited(trackingId: string): boolean {
+    const cooldown = this.cooldowns.get(trackingId);
     if (cooldown) {
       if (Date.now() < cooldown.blockedUntil) return true;
-      this.cooldowns.delete(providerId);
+      this.cooldowns.delete(trackingId);
     }
-    // 2. Proactive sliding-window check
-    return this.isWindowFull(providerId);
+    return this.isWindowFull(trackingId);
   }
 
-  private isWindowFull(providerId: string): boolean {
+  private isWindowFull(trackingId: string): boolean {
     const now = Date.now();
-    const cfg = PROVIDER_WINDOW_CONFIGS[providerId] ?? FALLBACK_CONFIG;
-    const window = this.windows.get(providerId);
+    const cfg = PROVIDER_WINDOW_CONFIGS[getProviderId(trackingId)] ?? FALLBACK_CONFIG;
+    const window = this.windows.get(trackingId);
     if (!window || window.length === 0) return false;
     const fresh = window.filter((t) => now - t < cfg.windowMs);
-    this.windows.set(providerId, fresh);
+    this.windows.set(trackingId, fresh);
     return fresh.length >= cfg.maxRequests;
   }
 
-  /** Call when a provider returns 429. Sets an explicit cooldown. */
-  markRateLimited(providerId: string, retryAfterSeconds?: number): void {
+  /** Call when a specific key receives an upstream 429. */
+  markRateLimited(trackingId: string, retryAfterSeconds?: number): void {
     const cooldownMs = retryAfterSeconds != null
       ? retryAfterSeconds * 1_000
       : 60_000;
-    this.cooldowns.set(providerId, { blockedUntil: Date.now() + cooldownMs });
+    this.cooldowns.set(trackingId, { blockedUntil: Date.now() + cooldownMs });
   }
 
-  /** Call on successful response — clears explicit 429 cooldown. */
-  clearRateLimit(providerId: string): void {
-    this.cooldowns.delete(providerId);
+  /** Call on successful response — clears the explicit cooldown for that key. */
+  clearRateLimit(trackingId: string): void {
+    this.cooldowns.delete(trackingId);
   }
 
-  /** Returns current sliding-window stats for observability. */
-  getWindowStats(providerId: string): {
+  /** Returns current sliding-window stats for a specific key. */
+  getWindowStats(trackingId: string): {
     requestsInWindow: number;
     maxRequests: number;
     windowMs: number;
     retryAfterMs: number | null;
   } {
     const now = Date.now();
-    const cfg = PROVIDER_WINDOW_CONFIGS[providerId] ?? FALLBACK_CONFIG;
-    const window = this.windows.get(providerId) ?? [];
+    const cfg = PROVIDER_WINDOW_CONFIGS[getProviderId(trackingId)] ?? FALLBACK_CONFIG;
+    const window = this.windows.get(trackingId) ?? [];
     const fresh = window.filter((t) => now - t < cfg.windowMs);
-    const cooldown = this.cooldowns.get(providerId);
+    const cooldown = this.cooldowns.get(trackingId);
     const retryAfterMs =
       cooldown && now < cooldown.blockedUntil ? cooldown.blockedUntil - now : null;
     return {

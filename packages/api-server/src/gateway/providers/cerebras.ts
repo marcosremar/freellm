@@ -1,4 +1,4 @@
-import { BaseProvider } from "./base.js";
+import { BaseProvider, parseApiKeys } from "./base.js";
 import type { ModelObject } from "../types.js";
 
 export class CerebrasProvider extends BaseProvider {
@@ -12,9 +12,7 @@ export class CerebrasProvider extends BaseProvider {
     { id: "cerebras/gpt-oss-120b", object: "model", created: 1700000000, owned_by: "openai", provider: "cerebras" },
   ];
 
-  protected getApiKey(): string | undefined {
-    return process.env["CEREBRAS_API_KEY"];
+  protected getApiKeys(): string[] {
+    return parseApiKeys(process.env["CEREBRAS_API_KEY"]);
   }
-
-
 }

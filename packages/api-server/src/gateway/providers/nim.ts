@@ -1,4 +1,4 @@
-import { BaseProvider } from "./base.js";
+import { BaseProvider, parseApiKeys } from "./base.js";
 import type { ModelObject } from "../types.js";
 
 export class NimProvider extends BaseProvider {
@@ -16,7 +16,7 @@ export class NimProvider extends BaseProvider {
     { id: "nim/deepseek-ai/deepseek-r1", object: "model", created: 1700000000, owned_by: "deepseek", provider: "nim" },
   ];
 
-  protected getApiKey(): string | undefined {
-    return process.env["NVIDIA_NIM_API_KEY"];
+  protected getApiKeys(): string[] {
+    return parseApiKeys(process.env["NVIDIA_NIM_API_KEY"]);
   }
 }

@@ -1,4 +1,4 @@
-import { BaseProvider } from "./base.js";
+import { BaseProvider, parseApiKeys } from "./base.js";
 import type { ModelObject } from "../types.js";
 
 export class MistralProvider extends BaseProvider {
@@ -12,9 +12,7 @@ export class MistralProvider extends BaseProvider {
     { id: "mistral/mistral-medium-latest", object: "model", created: 1700000000, owned_by: "mistral", provider: "mistral" },
   ];
 
-  protected getApiKey(): string | undefined {
-    return process.env["MISTRAL_API_KEY"];
+  protected getApiKeys(): string[] {
+    return parseApiKeys(process.env["MISTRAL_API_KEY"]);
   }
-
-
 }

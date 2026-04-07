@@ -25,20 +25,27 @@ export class OllamaProvider extends BaseProvider {
       }));
   }
 
-  protected getApiKey(): string | undefined {
-    const baseUrl = process.env["OLLAMA_BASE_URL"];
-    return baseUrl ? "ollama" : undefined;
+  /**
+   * Ollama has no API keys — it uses a baseURL only. When configured, we return a
+   * single sentinel "key" so the rest of the base-provider flow (rotation, tracking ID,
+   * rate limiter) works uniformly across all providers.
+   */
+  protected getApiKeys(): string[] {
+    return process.env["OLLAMA_BASE_URL"] ? ["ollama"] : [];
   }
 
-  isEnabled(): boolean {
-    return !!process.env["OLLAMA_BASE_URL"];
-  }
-
+  /** Ollama overrides complete() to skip the Authorization header. */
   async complete(request: ChatCompletionRequest): Promise<Response> {
-    const mapped = this.mapRequest(request);
+    const picked = this.pickKey();
+    if (!picked) {
+      throw new Error(`Provider ${this.name} is not configured`);
+    }
+
     this.stats.totalRequests++;
     this.stats.lastUsedAt = new Date().toISOString();
-    this.rateLimiter.recordRequest(this.id);
+    this.rateLimiter.recordRequest(picked.trackingId);
+
+    const mapped = this.mapRequest(request);
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
@@ -46,6 +53,9 @@ export class OllamaProvider extends BaseProvider {
       body: JSON.stringify(mapped),
     });
 
+    // Attribute the response to the picked key for onSuccess/onRateLimit hooks.
+    // Use the protected helper from BaseProvider.
+    this.attachResponseToKey(response, picked.trackingId);
     return response;
   }
 }

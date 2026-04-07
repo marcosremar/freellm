@@ -82,6 +82,14 @@ export interface GatewayStatus {
   recentRequests: RequestLogEntry[];
 }
 
+export interface KeyStatus {
+  index: number;
+  rateLimited: boolean;
+  requestsInWindow: number;
+  maxRequests: number;
+  retryAfterMs: number | null;
+}
+
 export interface ProviderStatusInfo {
   id: string;
   name: string;
@@ -94,6 +102,9 @@ export interface ProviderStatusInfo {
   lastError?: string | null;
   lastUsedAt?: string | null;
   models: string[];
+  keyCount: number;
+  keysAvailable: number;
+  keys: KeyStatus[];
 }
 
 export interface GatewayError {

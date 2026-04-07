@@ -41,6 +41,7 @@ statusRouter.post("/providers/:providerId/reset", (req, res) => {
 
   provider.resetCircuitBreaker();
   const stats = provider.getStats();
+  const keys = provider.getKeysStatus();
 
   res.json({
     id: provider.id,
@@ -54,6 +55,9 @@ statusRouter.post("/providers/:providerId/reset", (req, res) => {
     lastError: stats.lastError ?? null,
     lastUsedAt: stats.lastUsedAt ?? null,
     models: provider.models.map((m) => m.id),
+    keyCount: keys.length,
+    keysAvailable: keys.filter((k) => !k.rateLimited).length,
+    keys,
   });
 });
 

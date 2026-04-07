@@ -1,5 +1,6 @@
 import type {
   ChatCompletionRequest,
+  KeyStatus,
   ModelObject,
   ProviderStats,
   CircuitBreakerState,
@@ -14,10 +15,11 @@ export interface ProviderAdapter {
   getStats(): ProviderStats;
   getCircuitBreakerState(): CircuitBreakerState;
   isAvailable(): boolean;
+  getKeysStatus(): KeyStatus[];
 
   complete(request: ChatCompletionRequest): Promise<Response>;
-  onSuccess(): void;
-  onRateLimit(retryAfterSeconds?: number): void;
+  onSuccess(response: Response): void;
+  onRateLimit(response: Response, retryAfterSeconds?: number): void;
   onError(): void;
   resetCircuitBreaker(): void;
 }

@@ -106,8 +106,12 @@ export class GatewayRouter {
 
         if (response.status === 429) {
           const retryAfter = response.headers.get("retry-after");
-          provider.onRateLimit(retryAfter ? parseInt(retryAfter, 10) : undefined);
-          excluded.add(provider.id);
+          provider.onRateLimit(response, retryAfter ? parseInt(retryAfter, 10) : undefined);
+          // Only exclude the provider if ALL its keys are now rate-limited.
+          // Otherwise the next iteration can pick a different key from the same provider.
+          if (!provider.isAvailable()) {
+            excluded.add(provider.id);
+          }
           continue;
         }
 
@@ -127,7 +131,7 @@ export class GatewayRouter {
           continue;
         }
 
-        provider.onSuccess();
+        provider.onSuccess(response);
         return { response, provider, resolvedModel };
       } catch (err) {
         if (err instanceof ProviderClientError) throw err;

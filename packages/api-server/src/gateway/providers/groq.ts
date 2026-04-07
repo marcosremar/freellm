@@ -1,4 +1,4 @@
-import { BaseProvider } from "./base.js";
+import { BaseProvider, parseApiKeys } from "./base.js";
 import type { ModelObject } from "../types.js";
 
 export class GroqProvider extends BaseProvider {
@@ -13,9 +13,7 @@ export class GroqProvider extends BaseProvider {
     { id: "groq/qwen/qwen3-32b", object: "model", created: 1700000000, owned_by: "alibaba", provider: "groq" },
   ];
 
-  protected getApiKey(): string | undefined {
-    return process.env["GROQ_API_KEY"];
+  protected getApiKeys(): string[] {
+    return parseApiKeys(process.env["GROQ_API_KEY"]);
   }
-
-
 }
