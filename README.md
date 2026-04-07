@@ -4,15 +4,15 @@
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
-![Node](https://img.shields.io/badge/Node.js-24+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Providers](https://img.shields.io/badge/Providers-5-blueviolet?style=flat-square)
-![Models](https://img.shields.io/badge/Models-20+-orange?style=flat-square)
+![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
+![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
+![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
 
 ### Stop juggling API keys. Start shipping.
 
-One endpoint, 5 providers, 20+ models -- all free.
+One endpoint, 6 providers, 25+ models -- all free.
 FreeLLM is an OpenAI-compatible gateway that routes your requests across
-Groq, Gemini, Mistral, Cerebras, and Ollama so you never hit a rate limit again.
+Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate limit again.
 
 [Quickstart](#quickstart) · [How It Works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard) · [Architecture](#architecture)
 
@@ -51,9 +51,13 @@ Your request goes to the fastest available provider. If that provider is rate-li
 | **Gemini** | Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite | ~15 req/min | Most capable free models |
 | **Mistral** | Mistral Small, Mistral Medium, Mistral Nemo | ~5 req/min | Strong reasoning at low cost |
 | **Cerebras** | Llama 3.1 8B, Qwen3 235B, GPT-OSS 120B | ~30 req/min | High-throughput inference |
+| **NVIDIA NIM** | Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, Mixtral 8x22B, DeepSeek R1 | ~40 req/min | Frontier models on DGX Cloud |
 | **Ollama** | Any local model | Unlimited | Your hardware, your rules |
 
-**Combined free capacity: ~80 requests/minute** across all cloud providers -- enough for prototyping, internal tools, and side projects.
+**Combined free capacity: ~120 requests/minute** across all cloud providers -- enough for prototyping, internal tools, and side projects.
+
+> Get free API keys from each provider:
+> [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com)
 
 ## Quickstart
 
@@ -91,6 +95,7 @@ GROQ_API_KEY=gsk_...
 GEMINI_API_KEY=AI...
 MISTRAL_API_KEY=...
 CEREBRAS_API_KEY=...
+NVIDIA_NIM_API_KEY=nvapi-...
 ```
 
 #### 3. Start
@@ -151,16 +156,19 @@ Don't pick a provider. Pick a strategy:
 | Model | What It Does | Use When |
 |-------|-------------|----------|
 | `free` | Rotates across all available providers evenly | You want maximum uptime |
-| `free-fast` | Routes to the lowest-latency provider first (Groq > Cerebras > Gemini) | You're building a chatbot or real-time UI |
-| `free-smart` | Routes to the most capable model first (Gemini > Groq > Mistral) | You need stronger reasoning or longer context |
+| `free-fast` | Routes to the lowest-latency provider first (Groq > Cerebras > Gemini > NIM) | You're building a chatbot or real-time UI |
+| `free-smart` | Routes to the most capable model first (Gemini > NIM > Groq > Mistral) | You need stronger reasoning or longer context |
 
 Need a specific model? Target it directly:
 
 ```
 groq/llama-3.3-70b-versatile
-gemini/gemini-2.0-flash
+gemini/gemini-2.5-flash
 mistral/mistral-small-latest
-cerebras/llama3.3-70b
+cerebras/llama3.1-8b
+nim/meta/llama-3.3-70b-instruct
+nim/nvidia/llama-3.1-nemotron-70b-instruct
+nim/deepseek-ai/deepseek-r1
 ```
 
 ### Request Lifecycle
@@ -249,8 +257,8 @@ stateDiagram-v2
 flowchart LR
     subgraph Meta-Models
         Free[free] -->|Round-robin| All[All Providers]
-        Fast[free-fast] -->|Priority| FastOrder[Groq → Cerebras → Gemini → Mistral → Ollama]
-        Smart[free-smart] -->|Priority| SmartOrder[Gemini → Groq → Mistral → Cerebras → Ollama]
+        Fast[free-fast] -->|Priority| FastOrder[Groq → Cerebras → Gemini → NIM → Mistral → Ollama]
+        Smart[free-smart] -->|Priority| SmartOrder[Gemini → NIM → Groq → Mistral → Cerebras → Ollama]
     end
 ```
 
@@ -346,6 +354,7 @@ graph TB
         Gemini([Gemini])
         Mistral([Mistral])
         Cerebras([Cerebras])
+        NIM([NVIDIA NIM])
         Ollama([Ollama])
     end
 

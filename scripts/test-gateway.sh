@@ -117,9 +117,29 @@ STREAM=$(curl -s "$BASE_URL/v1/chat/completions" \
 check "Streaming response contains SSE data" "data:" "$STREAM"
 check "Streaming response ends with [DONE]" "[DONE]" "$STREAM"
 
-# 7. Validation
+# 7. NVIDIA NIM (direct provider test)
 bold ""
-bold "[7/7] Request Validation"
+bold "[7/8] NVIDIA NIM Direct Test"
+NIM=$(curl -s -w "\n%{http_code}" "$BASE_URL/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nim/meta/llama-3.3-70b-instruct",
+    "messages": [{"role": "user", "content": "Reply with just the word: hello"}],
+    "max_tokens": 10
+  }')
+NIM_CODE=$(echo "$NIM" | tail -1)
+NIM_BODY=$(echo "$NIM" | sed '$d')
+check "NIM direct call returns 200" "200" "$NIM_CODE"
+check "NIM response has choices" '"choices"' "$NIM_BODY"
+check "NIM x_freellm_provider is nim" '"x_freellm_provider":"nim"' "$NIM_BODY"
+
+NIM_CONTENT=$(echo "$NIM_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['choices'][0]['message']['content'][:80])" 2>/dev/null)
+dim "        Model: nim/meta/llama-3.3-70b-instruct"
+dim "        Response: $NIM_CONTENT"
+
+# 8. Validation
+bold ""
+bold "[8/8] Request Validation"
 BAD_REQ=$(curl -s -w "\n%{http_code}" "$BASE_URL/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model": "", "messages": []}')

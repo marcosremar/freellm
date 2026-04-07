@@ -3,6 +3,7 @@ import { GeminiProvider } from "./providers/gemini.js";
 import { MistralProvider } from "./providers/mistral.js";
 import { CerebrasProvider } from "./providers/cerebras.js";
 import { OllamaProvider } from "./providers/ollama.js";
+import { NimProvider } from "./providers/nim.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
@@ -16,6 +17,7 @@ export class ProviderRegistry {
       new GeminiProvider(),
       new MistralProvider(),
       new CerebrasProvider(),
+      new NimProvider(),
       new OllamaProvider(),
     ];
   }

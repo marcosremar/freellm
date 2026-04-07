@@ -9,6 +9,7 @@ const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
   gemini:   { windowMs: 60_000, maxRequests: 13 },  // ~15 RPM free
   mistral:  { windowMs: 60_000, maxRequests:  4 },  // ~5 RPM free
   cerebras: { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free
+  nim:      { windowMs: 60_000, maxRequests: 38 },  // ~40 RPM free (1k credits/account)
   ollama:   { windowMs: 60_000, maxRequests: 999 }, // local — effectively unlimited
 };
 

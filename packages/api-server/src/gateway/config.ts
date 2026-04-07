@@ -1,8 +1,8 @@
 /** Provider IDs ordered by speed (lowest latency first). */
-export const FAST_PRIORITY = ["groq", "cerebras", "gemini", "mistral", "ollama"] as const;
+export const FAST_PRIORITY = ["groq", "cerebras", "gemini", "nim", "mistral", "ollama"] as const;
 
 /** Provider IDs ordered by intelligence (most capable first). */
-export const SMART_PRIORITY = ["gemini", "groq", "mistral", "cerebras", "ollama"] as const;
+export const SMART_PRIORITY = ["gemini", "nim", "groq", "mistral", "cerebras", "ollama"] as const;
 
 /** The set of meta-model names that trigger multi-provider routing. */
 export const META_MODELS = new Set(["free", "free-fast", "free-smart"]);
@@ -13,6 +13,7 @@ export const DEFAULT_MODELS: Record<string, string> = {
   gemini: "gemini-2.5-flash",
   mistral: "mistral-small-latest",
   cerebras: "llama3.1-8b",
+  nim: "meta/llama-3.3-70b-instruct",
   ollama: "llama3",
 };
 
