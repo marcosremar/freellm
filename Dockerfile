@@ -9,7 +9,7 @@ FROM base AS deps
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/api-server/package.json packages/api-server/
 COPY packages/dashboard/package.json packages/dashboard/
-COPY lib/api-client-react/package.json lib/api-client-react/ 2>/dev/null || true
+COPY lib/api-client-react/package.json lib/api-client-react/
 
 RUN pnpm install --no-frozen-lockfile
 
