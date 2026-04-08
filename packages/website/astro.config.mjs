@@ -50,6 +50,7 @@ export default defineConfig({
           label: "Features",
           items: [
             { label: "Multi-Key Rotation", slug: "features/multi-key" },
+            { label: "Response Caching", slug: "features/caching" },
             { label: "Token Usage Tracking", slug: "features/token-usage" },
             { label: "Meta-Models", slug: "features/meta-models" },
             { label: "Circuit Breakers", slug: "features/circuit-breakers" },

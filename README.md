@@ -3,7 +3,7 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.2.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.3.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
@@ -51,10 +51,11 @@ Your request goes to the fastest available provider. If that provider is rate-li
 - **Automatic failover** -- Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
 - **Smart meta-models** -- `free-fast` for speed, `free-smart` for capability, `free` for maximum availability
 - **Multi-key rotation** -- stack multiple keys per provider to multiply your free capacity (`GROQ_API_KEY=k1,k2,k3`)
+- **Response caching** -- identical prompts return in ~23ms with zero provider quota burn (9× faster than the cold path)
 - **Token usage tracking** -- rolling 24h token counts per provider so you always know how much of your free budget is left
 - **Built-in rate-limit tracking** -- FreeLLM knows each provider's limits and avoids hitting them
 - **Circuit breakers** -- failing providers get taken out of rotation and tested for recovery automatically
-- **Real-time dashboard** -- provider health, live request log, latency, and token usage at a glance
+- **Real-time dashboard** -- provider health, live request log, latency, token usage, and cache hit rate at a glance
 - **Zero cost** -- every provider runs on its free tier
 
 ## Supported Providers
@@ -256,6 +257,42 @@ you get ~360 req/min of free inference, including frontier models like Llama
 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1. No other LLM gateway does this
 because they all assume you pay per token.
 
+### Response caching
+
+Identical prompts return cached responses in ~23ms with **zero provider quota
+burn**. The cache keys on `(model, messages, temperature, max_tokens, top_p, stop)`
+via SHA-256, uses LRU eviction, and respects per-entry TTL (default 1 hour).
+
+```
+Call A (cold)             cached=false  latency=200ms  tokens=43+2  → Groq
+Call B (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
+Call C (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
+Call D (different prompt) cached=false  latency=200ms  tokens=new   → Groq
+```
+
+That's a **9× speedup** on duplicate requests, and the Groq quota only gets
+charged for unique prompts. During development you typically hammer the same
+prompt 10-20 times while iterating — that's now 10-20 free hits.
+
+**Configuration** (all optional, all in `.env`):
+
+```env
+CACHE_ENABLED=true        # set to "false" to disable
+CACHE_TTL_MS=3600000      # 1 hour default
+CACHE_MAX_ENTRIES=1000    # LRU eviction at 1000
+```
+
+**Rules:**
+- Streaming requests are never cached (the SSE protocol is incompatible)
+- Errors are never cached (only successful 2xx responses)
+- Cache hits don't count against the per-provider token quota
+- Cached responses are marked with `x_freellm_cached: true` so clients can tell
+
+**Implementation:** in-memory LRU (no SQLite, no native modules, no
+persistent volume). Cold cache warms up in seconds, restart loss is
+acceptable for a free-tier gateway, and the entire feature ships with
+zero new dependencies.
+
 ### Token usage tracking
 
 Free tiers don't just have RPM limits — they have **daily token caps** (Groq:
@@ -435,7 +472,7 @@ Fully OpenAI-compatible. Available at `/v1/...` (direct) and `/api/v1/...` (prox
 |--------|----------|-------------|
 | `POST` | `/v1/chat/completions` | Chat completion (streaming and non-streaming) |
 | `GET` | `/v1/models` | List all available models + meta-models |
-| `GET` | `/v1/status` | Gateway health, provider states, per-key state, token usage, recent requests |
+| `GET` | `/v1/status` | Gateway health, provider states, per-key state, token usage, cache stats, recent requests |
 | `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
 | `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` |
 
@@ -446,9 +483,10 @@ Every response includes an `x_freellm_provider` header so you know which provide
 A built-in web UI for monitoring your gateway in real time:
 
 - **Provider health** -- see which providers are healthy, rate-limited, or failing
-- **Token usage** -- 4-card metrics row + per-provider amber "Tokens (24h)" blocks with prompt/completion breakdown
+- **Cache hits** -- new metric card showing total hits + hit rate (cyan)
+- **Token usage** -- per-provider amber "Tokens (24h)" blocks with prompt/completion breakdown
 - **Multi-key status** -- providers with stacked keys show a `keysAvailable / keyCount` badge
-- **Live request log** -- every request with model, provider, latency, status, and token counts
+- **Live request log** -- every request with model, provider, latency, status, token counts, and a `CACHE` badge for cached rows
 - **Routing controls** -- switch strategies without restarting the server
 - **Circuit breaker management** -- manually reset a tripped provider when you know it's back
 

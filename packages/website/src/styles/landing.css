@@ -655,7 +655,7 @@ body::before {
   pointer-events: none;
 }
 
-/* Bento spans — 1st card wide, then 3-2-3 layout, then 2-2-2 */
+/* Bento spans — wide hero row, then two rows of 3, then a wide spotlight */
 .feature-card:nth-child(1) { grid-column: span 6; }
 .feature-card:nth-child(2) { grid-column: span 6; }
 .feature-card:nth-child(3) { grid-column: span 4; }
@@ -664,6 +664,7 @@ body::before {
 .feature-card:nth-child(6) { grid-column: span 4; }
 .feature-card:nth-child(7) { grid-column: span 4; }
 .feature-card:nth-child(8) { grid-column: span 4; }
+.feature-card:nth-child(9) { grid-column: span 12; }
 
 @media (max-width: 1024px) {
   .feature-card:nth-child(n) { grid-column: span 6; }

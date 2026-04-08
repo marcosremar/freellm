@@ -5,6 +5,7 @@ const rows = [
   { feature: "OpenAI-compatible", freellm: true, litellm: true, openrouter: true, portkey: true },
   { feature: "Automatic failover", freellm: true, litellm: true, openrouter: true, portkey: true },
   { feature: "Built-in real-time dashboard", freellm: true, litellm: false, openrouter: true, portkey: true },
+  { feature: "Response caching (zero quota burn)", freellm: true, litellm: "Plugin", openrouter: false, portkey: true },
   { feature: "Per-provider token tracking", freellm: true, litellm: true, openrouter: true, portkey: true },
   { feature: "Circuit breakers", freellm: true, litellm: "Partial", openrouter: true, portkey: true },
   { feature: "Self-hosted", freellm: true, litellm: true, openrouter: false, portkey: "Both" },

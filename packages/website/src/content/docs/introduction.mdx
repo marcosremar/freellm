@@ -24,9 +24,10 @@ That's the entire migration.
 - **One endpoint, any OpenAI SDK** — swap your base URL, keep your existing code
 - **Automatic failover** — Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
 - **Multi-key rotation** — stack `GROQ_API_KEY=k1,k2,k3` to triple your free capacity
+- **Response caching** — identical prompts return in ~23ms with zero provider quota burn (9× faster than the cold path)
 - **Token usage tracking** — rolling 24h token counts per provider so you always know how much of your free budget is left
 - **Smart meta-models** — `free-fast` for speed, `free-smart` for capability, `free` for max uptime
-- **Built-in real-time dashboard** — provider health, live request log, latency, and token usage
+- **Built-in real-time dashboard** — provider health, live request log, latency, token usage, and cache hit rate
 - **Circuit breakers** — failing providers get taken out of rotation and tested for recovery automatically
 - **Truly $0** — no markup, no subscription, no surprise bills
 
@@ -34,6 +35,7 @@ That's the entire migration.
 
 - **[Quickstart](/quickstart/)** — deploy your gateway in 2 minutes
 - **[Multi-Key Rotation](/features/multi-key/)** — the killer feature: stack free tiers
+- **[Response Caching](/features/caching/)** — duplicate prompts return in 23ms with zero quota burn
 - **[Token Usage Tracking](/features/token-usage/)** — never lose track of your free budget
 - **[API Reference](/reference/api/)** — every endpoint, fully documented
 - **[Comparison](/comparison/)** — how FreeLLM compares to LiteLLM, OpenRouter, and Portkey

@@ -1,0 +1,80 @@
+---
+title: Response Caching
+description: Identical prompts return cached responses in ~23ms with zero provider quota burn.
+---
+
+Identical chat completions return cached responses in ~23ms with **zero provider quota burn**. The cache keys on `(model, messages, temperature, max_tokens, top_p, stop)` via SHA-256, uses LRU eviction, and respects per-entry TTL (default 1 hour).
+
+## Why this matters for free-tier developers
+
+During development you typically iterate on the same prompt 10-20 times — tweaking the system message, comparing outputs, debugging. Without caching, each iteration burns a provider request and a slice of your daily token quota. With caching, only the first iteration costs anything; the rest are free hits.
+
+A typical dev session of 100 chat completions might collapse to 30-40 unique prompts. That's a **60-70% reduction** in provider quota usage with no code changes on your end.
+
+## Verified end-to-end
+
+```bash
+Call A (cold)             cached=false  latency=200ms  tokens=43+2  → Groq
+Call B (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
+Call C (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
+Call D (different prompt) cached=false  latency=200ms  tokens=new   → Groq
+```
+
+That's a **9× speedup** on duplicate requests, and the Groq quota only gets charged for unique prompts.
+
+## How it works
+
+1. **Cache key** — `sha256(JSON.stringify({model, messages, temperature, max_tokens, top_p, stop}))`
+2. **Cache lookup** — happens BEFORE the routing loop, on every non-streaming request
+3. **Cache hit** — short-circuits the entire flow: no provider call, no token tracker increment, no rate limiter increment
+4. **Cache miss** — runs the normal failover loop, then writes the successful response back to cache
+5. **LRU eviction** — at capacity, the oldest entry is dropped (Map re-insertion keeps recently-used entries at the end)
+6. **TTL expiry** — each entry has its own `expiresAt`, checked on read
+
+## Configuration
+
+```bash
+CACHE_ENABLED=true        # set to "false" to disable
+CACHE_TTL_MS=3600000      # 1 hour default
+CACHE_MAX_ENTRIES=1000    # LRU eviction at 1000
+```
+
+All optional. Sensible defaults — you don't need to set anything.
+
+## Rules
+
+- **Streaming requests are never cached.** The OpenAI SSE protocol doesn't fit the cache abstraction cleanly.
+- **Errors are never cached.** Only successful 2xx responses get stored.
+- **Cache hits don't count against the per-provider token quota.** Real cost = 0.
+- **Cached responses are marked.** Look for `x_freellm_cached: true` in the response (alongside `x_freellm_provider`).
+- **Cache survives within the process.** Restart loses the cache, which warms up again in seconds.
+
+## Cache stats on `/v1/status`
+
+```json
+{
+  "cache": {
+    "enabled": true,
+    "ttlMs": 3600000,
+    "maxEntries": 1000,
+    "currentSize": 12,
+    "hits": 47,
+    "misses": 8,
+    "sets": 8,
+    "evictions": 0,
+    "hitRate": 0.8545
+  }
+}
+```
+
+The dashboard surfaces this as a cyan "Cache Hits" metric card with the hit-rate percentage as a sub-line, and rows in the recent requests table get a `CACHE` badge when served from cache.
+
+## Why in-memory instead of SQLite
+
+The original plan called for `better-sqlite3`, but it was rejected because:
+
+1. **Native compilation risk.** `better-sqlite3` needs `node-gyp`, Python, and a C++ toolchain at install time. Railway's slim image likely lacks them, which would break the published Railway template's build.
+2. **Ephemeral filesystem on free tiers.** Railway and Render free tiers don't have persistent disk by default. A SQLite cache file would be wiped on every restart anyway, requiring a paid persistent volume.
+3. **Architectural consistency.** Every other observability piece in FreeLLM (request log, rate limiter, circuit breaker, usage tracker) is in-memory. Adding DB-backed storage for one feature would break the pattern.
+
+Cold cache warms up in seconds, restart loss is acceptable for a free-tier gateway, and the entire feature ships with **zero new dependencies** (uses Node's built-in `crypto.createHash`). The `ResponseCache` class lives behind a clean interface, so swapping the storage to SQLite later is a one-file change if persistence becomes a priority.

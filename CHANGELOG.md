@@ -5,6 +5,92 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-08
+
+Response caching — same prompt twice returns the cached response in ~23ms
+with **zero provider quota burn**. Verified end-to-end at 9× faster than
+the cold path (200ms → 23ms).
+
+### Added
+
+#### In-memory LRU response cache
+- New `ResponseCache` class with sha256-keyed exact-match lookup
+- Cache key built from `(model, messages, temperature, max_tokens, top_p, stop)`
+- LRU eviction via Map re-insertion (recently-used entries stay at the end)
+- Per-entry TTL expiry (default 1 hour, configurable)
+- Default capacity 1000 entries (configurable)
+- Cache hits short-circuit the entire routing flow:
+  no provider call, no token quota burn, no rate limiter increment
+- Streaming requests are never cached (the SSE protocol is incompatible)
+- Errors are never cached (only successful 2xx responses)
+
+#### Response markers
+- Cached responses include `x_freellm_cached: true` (alongside `x_freellm_provider`)
+- `RequestLogEntry` gained a `cached?: boolean` field
+- Token usage tracker is **not** incremented on cache hits (real cost = 0)
+
+#### Cache stats on `/v1/status`
+- New `cache` field with full counters:
+  ```json
+  {
+    "enabled": true,
+    "ttlMs": 3600000,
+    "maxEntries": 1000,
+    "currentSize": 12,
+    "hits": 47,
+    "misses": 8,
+    "sets": 8,
+    "evictions": 0,
+    "hitRate": 0.8545
+  }
+  ```
+
+#### Configuration
+- `CACHE_ENABLED` (default `true`) — set to `false` to disable
+- `CACHE_TTL_MS` (default `3600000` = 1 hour)
+- `CACHE_MAX_ENTRIES` (default `1000`)
+
+#### Dashboard
+- New 5th metrics card "Cache Hits" (cyan, Database icon) with hit-rate sub-line
+- Metrics row layout updated to 2/3/5 cols across mobile/medium/large breakpoints
+- Recent requests table shows a `CACHE` badge next to `OK` for cached rows
+
+### Why in-memory instead of SQLite
+
+The original plan called for `better-sqlite3`, but it was rejected because:
+
+1. **Native compilation risk** — `better-sqlite3` needs `node-gyp` + Python +
+   build tools at install time. Railway's slim image likely lacks them, which
+   would break the published Railway template's build.
+2. **Ephemeral filesystem on free tiers** — Railway and Render free tiers
+   don't have persistent disk. A SQLite cache file would be wiped on every
+   restart anyway, requiring a paid persistent volume.
+3. **Architectural consistency** — every other observability piece in
+   FreeLLM (`RequestLog`, `RateLimiter`, `CircuitBreaker`, `UsageTracker`)
+   is in-memory. Adding DB-backed storage for one feature would break the
+   pattern.
+
+Cold cache warms up in seconds, restart loss is acceptable for a free-tier
+gateway, and the entire feature ships with **zero new dependencies** (uses
+Node's built-in `crypto.createHash`). The ResponseCache class lives behind
+a clean interface, so swapping the storage to SQLite later is a one-file
+change if persistence becomes a priority.
+
+### Verified end-to-end
+
+```
+Call A (cold)             cached=false  latency=200ms   tokens=43+2  provider=groq
+Call B (same)             cached=true   latency=23ms    tokens=0     no upstream
+Call C (same)             cached=true   latency=23ms    tokens=0     no upstream
+Call D (different prompt) cached=false  latency=~200ms  tokens=new   provider=groq
+```
+
+9× speedup, 50% hit rate after 4 calls, all 18 gateway tests still passing.
+
+[1.3.0]: https://github.com/Devansh-365/freellm/releases/tag/v1.3.0
+
+---
+
 ## [1.2.0] - 2026-04-08
 
 Token usage tracking — the ironic missing piece for a free-tier gateway.
