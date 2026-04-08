@@ -1,0 +1,92 @@
+name: New Provider Request
+description: Request a new free-tier LLM provider be added to FreeLLM
+title: "[Provider] Add support for "
+labels: ["enhancement", "new-provider"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and this provider is not already requested
+          required: true
+        - label: This provider has a free tier that does not require a credit card
+          required: true
+        - label: This provider has an OpenAI-compatible chat completions endpoint (or close enough that an adapter is feasible)
+          required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Provider name
+      placeholder: Together AI
+    validations:
+      required: true
+
+  - type: input
+    id: signup_url
+    attributes:
+      label: Signup URL
+      description: Where developers go to get a free API key
+      placeholder: https://api.together.xyz
+    validations:
+      required: true
+
+  - type: input
+    id: base_url
+    attributes:
+      label: API base URL
+      placeholder: https://api.together.xyz/v1
+    validations:
+      required: true
+
+  - type: textarea
+    id: free_tier
+    attributes:
+      label: Free tier details
+      description: |
+        - What's the rate limit (req/min)?
+        - What's the daily token cap (if any)?
+        - Are there any usage restrictions or attribution requirements?
+        - Does the provider's ToS allow operating multiple accounts (for multi-key rotation)?
+      placeholder: |
+        - 60 req/min on free tier
+        - 1M tokens/day
+        - No commercial use restriction
+        - Multiple accounts allowed under separate emails
+    validations:
+      required: true
+
+  - type: textarea
+    id: models
+    attributes:
+      label: Notable models available
+      description: List the most useful models on the free tier (with model IDs)
+      placeholder: |
+        - meta-llama/Llama-3.3-70B-Instruct-Turbo-Free
+        - deepseek-ai/DeepSeek-V3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: openai_compat
+    attributes:
+      label: OpenAI compatibility
+      options:
+        - "Fully OpenAI-compatible (drop-in)"
+        - "Mostly compatible (minor differences)"
+        - "Compatible with shim (custom adapter needed)"
+        - "Not compatible (would need significant work)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: docs
+    attributes:
+      label: API documentation links
+      description: Links to the provider's API docs and authentication docs
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else maintainers should know

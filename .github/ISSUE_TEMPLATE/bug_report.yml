@@ -1,0 +1,152 @@
+name: Bug Report
+description: Report a routing failure, provider error, dashboard glitch, or unexpected behavior
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I am running the latest tagged release (or `main`)
+          required: true
+        - label: This is NOT a security vulnerability (those go to private advisories)
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what went wrong.
+      placeholder: When I send a request to /v1/chat/completions with model "free-fast"...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - Gateway router / failover
+        - Provider adapter (specify which in description)
+        - Multi-key rotation
+        - Response cache
+        - Token usage tracking
+        - Circuit breaker
+        - Dashboard UI
+        - Website / docs
+        - Docker / deployment
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Which provider was the request routed to?
+      multiple: true
+      options:
+        - Groq
+        - Gemini
+        - Mistral
+        - Cerebras
+        - NVIDIA NIM
+        - Ollama
+        - Not applicable
+        - Don't know
+
+  - type: input
+    id: model
+    attributes:
+      label: Model used
+      description: The exact model string you sent (e.g. `free-fast`, `groq/llama-3.3-70b-versatile`, `nim/meta/llama-3.3-70b-instruct`)
+      placeholder: free-fast
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment
+      options:
+        - Local pnpm dev
+        - Docker (docker compose)
+        - Docker (ghcr.io/devansh-365/freellm image)
+        - Railway
+        - Render
+        - Self-hosted (other)
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps to trigger the bug. Include the curl command or SDK code if relevant.
+      value: |
+        1. Set env var ...
+        2. Start the gateway with `pnpm dev`
+        3. Send this request: `curl ...`
+        4. Observe ...
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened. Include the response body if relevant.
+      render: text
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Pino log lines from the gateway. **Redact any API keys or sensitive data first.**
+      render: text
+
+  - type: textarea
+    id: status
+    attributes:
+      label: Output of `GET /v1/status`
+      description: Helps us understand the gateway state when the bug happened. **Redact API keys.**
+      render: json
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: For dashboard or website bugs, drag screenshots here.
+
+  - type: input
+    id: version
+    attributes:
+      label: FreeLLM version
+      description: The release tag or commit SHA you're running
+      placeholder: v1.3.0 or sha-abc1234
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Output of `node --version`
+      placeholder: v22.x or v20.x
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that might help us diagnose the issue.
