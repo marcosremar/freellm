@@ -5,474 +5,190 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Version](https://img.shields.io/badge/version-v1.3.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
-![Node](https://img.shields.io/badge/Node.js-22+-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
 
-### Stop juggling API keys. Start shipping.
+### You shouldn't need a credit card to call an LLM.
 
-One endpoint, 6 providers, 25+ models -- all free.
-FreeLLM is an OpenAI-compatible gateway that routes your requests across
-Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama so you never hit a rate limit again.
+One endpoint. 6 providers. 25+ models. Zero dollars.
 
-**Stack multiple keys per provider to multiply your free capacity.**
-Set `GROQ_API_KEY=key1,key2,key3` and get 3× the free-tier RPM.
+FreeLLM is an OpenAI-compatible gateway that routes across Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama. When one rate-limits, the next one answers. You stop seeing 429s.
 
-[Quickstart](#quickstart) · [How It Works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard) · [Architecture](#architecture)
+Stack 3 keys per provider and you get **~360 free requests per minute**. Including Llama 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1.
 
----
+Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
+
+[Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard)
+
+**If you've ever burned $20 testing prompts, [star the repo](https://github.com/Devansh-365/freellm). It helps other builders find it.**
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/_0jAQr?referralCode=3z4ZBN&utm_medium=integration&utm_source=template&utm_campaign=generic) &nbsp; [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
 
 ![FreeLLM Dashboard](docs/screenshots/dashboard-demo.gif)
 
-### Deploy in one click
-
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/_0jAQr?referralCode=3z4ZBN&utm_medium=integration&utm_source=template&utm_campaign=generic)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
-
 </div>
 
-## The Problem
+## Why this exists
 
-You want to use LLMs in your project without paying. Every major provider has a free tier -- but each comes with its own SDK, its own rate limits, and its own downtime. You end up writing provider-switching logic, handling 429s, and babysitting API keys across five different dashboards.
+Every major provider has a free tier. Groq, Gemini, Mistral, Cerebras, NVIDIA. All of them.
 
-**FreeLLM fixes this in one line:**
+But using them is painful.
+
+Each one ships its own SDK. Each one has its own rate limits. Each one goes down at the worst possible time. So you end up writing provider-switching logic, handling 429s, and babysitting API keys across five different dashboards.
+
+I built FreeLLM because I was tired of paying OpenAI $20 to test a prompt I'd run 30 times in an afternoon.
+
+One line replaces all of that:
 
 ```bash
 curl http://localhost:3000/v1/chat/completions \
   -d '{"model": "free-fast", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-Your request goes to the fastest available provider. If that provider is rate-limited or down, FreeLLM tries the next one. You get a response. Every time.
+The request goes to the fastest available provider. If that one is rate-limited or down, FreeLLM tries the next. You get a response. Every time.
 
-## What You Get
+## What you get
 
-- **One endpoint, any OpenAI SDK** -- swap your base URL, keep your existing code
-- **Automatic failover** -- Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras
-- **Smart meta-models** -- `free-fast` for speed, `free-smart` for capability, `free` for maximum availability
-- **Multi-key rotation** -- stack multiple keys per provider to multiply your free capacity (`GROQ_API_KEY=k1,k2,k3`)
-- **Response caching** -- identical prompts return in ~23ms with zero provider quota burn (9× faster than the cold path)
-- **Token usage tracking** -- rolling 24h token counts per provider so you always know how much of your free budget is left
-- **Built-in rate-limit tracking** -- FreeLLM knows each provider's limits and avoids hitting them
-- **Circuit breakers** -- failing providers get taken out of rotation and tested for recovery automatically
-- **Real-time dashboard** -- provider health, live request log, latency, token usage, and cache hit rate at a glance
-- **Zero cost** -- every provider runs on its free tier
+→ **Drop-in OpenAI SDK.** Swap your base URL. Keep your code.
+→ **Automatic failover.** Groq rate-limited? Routes to Gemini, then Mistral, then Cerebras.
+→ **Three meta-models.** `free-fast` for speed, `free-smart` for reasoning, `free` for max availability.
+→ **Multi-key rotation.** Stack keys per provider for 3-4× the free RPM.
+→ **Response caching.** Identical prompts return in ~23ms with zero quota burn.
+→ **Token tracking.** Rolling 24h budget per provider, surfaced in the dashboard.
+→ **Circuit breakers.** Failing providers get sidelined and tested for recovery.
+→ **Real-time dashboard.** Provider health, request log, latency, cache hit rate.
+→ **Zero cost.** Every provider runs on its free tier.
 
-## Supported Providers
+## Supported providers
 
-| Provider | Models | Free Tier (per key) | Why It's Here |
-|----------|--------|--------------------|----------------|
-| **Groq** | Llama 3.3 70B, Llama 3.1 8B, Llama 4 Scout, Qwen3 32B | ~30 req/min | Fastest inference available |
-| **Gemini** | Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite | ~15 req/min | Most capable free models |
-| **Mistral** | Mistral Small, Mistral Medium, Mistral Nemo | ~5 req/min | Strong reasoning at low cost |
-| **Cerebras** | Llama 3.1 8B, Qwen3 235B, GPT-OSS 120B | ~30 req/min | High-throughput inference |
-| **NVIDIA NIM** | Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, Mixtral 8x22B, DeepSeek R1 | ~40 req/min | Frontier models on DGX Cloud |
-| **Ollama** | Any local model | Unlimited | Your hardware, your rules |
+| Provider | Models | Free tier (per key) |
+|----------|--------|---------------------|
+| **Groq** | Llama 3.3 70B, Llama 3.1 8B, Llama 4 Scout, Qwen3 32B | ~30 req/min |
+| **Gemini** | Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite | ~15 req/min |
+| **Mistral** | Mistral Small, Medium, Nemo | ~5 req/min |
+| **Cerebras** | Llama 3.1 8B, Qwen3 235B, GPT-OSS 120B | ~30 req/min |
+| **NVIDIA NIM** | Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, DeepSeek R1 | ~40 req/min |
+| **Ollama** | Any local model | Unlimited |
 
-**Baseline combined capacity: ~120 req/min** across all cloud providers with one key each.
-**With multi-key stacking (3 keys per provider): ~360 req/min.** All $0.
+Baseline: ~120 req/min combined. With 3 keys per provider: **~360 req/min. All $0.**
 
-> Get free API keys from each provider:
-> [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com)
+> Get free keys: [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com)
 
 ## Quickstart
 
-### Option A: One-click cloud deploy
+**One-click deploy** (no terminal needed):
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/_0jAQr?referralCode=3z4ZBN&utm_medium=integration&utm_source=template&utm_campaign=generic) &nbsp; [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm)
 
-Click a button above, sign in, and add your provider API keys. Your gateway is live in under 2 minutes -- no clone, no Docker, no terminal.
-
-### Option B: Docker
-
-**Pull the prebuilt image** (no clone needed):
+**Or run locally with Docker:**
 
 ```bash
 docker run -d -p 3000:3000 \
   -e GROQ_API_KEY=gsk_... \
   -e GEMINI_API_KEY=AI... \
-  -e MISTRAL_API_KEY=... \
-  -e CEREBRAS_API_KEY=... \
-  -e NVIDIA_NIM_API_KEY=nvapi-... \
-  --name freellm \
   ghcr.io/devansh-365/freellm:latest
 ```
 
-**Or clone and use docker-compose:**
+**Or clone for local dev:**
 
 ```bash
 git clone https://github.com/Devansh-365/freellm.git
 cd freellm
-cp .env.example .env        # add your API keys
-docker compose up
-```
-
-API runs on `http://localhost:3000`. Done.
-
-### Option C: Local development
-
-#### 1. Clone and install
-
-```bash
-git clone https://github.com/Devansh-365/freellm.git
-cd freellm
-pnpm install
-```
-
-#### 2. Add your API keys
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and paste at least one key. More keys = more availability:
-
-```env
-GROQ_API_KEY=gsk_...
-GEMINI_API_KEY=AI...
-MISTRAL_API_KEY=...
-CEREBRAS_API_KEY=...
-NVIDIA_NIM_API_KEY=nvapi-...
-```
-
-**Pro tip:** stack multiple keys per provider (comma-separated) to multiply your free-tier capacity. Each key gets its own independent rate-limit budget:
-
-```env
-GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3   # 3× the Groq free-tier RPM
-```
-
-#### 3. Start
-
-```bash
-pnpm dev
+cp .env.example .env   # add your keys
+pnpm install && pnpm dev
 ```
 
 API runs on `http://localhost:3000`. Dashboard on `http://localhost:5173`.
 
-Point any OpenAI-compatible SDK at `http://localhost:3000/v1` and go.
-
-### Use with Python
+### Use it from anywhere
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:3000/v1", api_key="unused")
-
 response = client.chat.completions.create(
     model="free-smart",
     messages=[{"role": "user", "content": "Explain quantum computing in one paragraph."}]
 )
-
 print(response.choices[0].message.content)
 ```
-
-### Use with TypeScript
 
 ```typescript
 import OpenAI from "openai";
 
 const client = new OpenAI({ baseURL: "http://localhost:3000/v1", apiKey: "unused" });
-
 const response = await client.chat.completions.create({
   model: "free-fast",
   messages: [{ role: "user", content: "Hello!" }],
 });
 ```
 
-### Use with curl
+## How it works
 
-```bash
-curl http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "free",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
-```
+### Meta-models
 
-## How It Works
+Don't pick a provider. Pick a strategy.
 
-### Meta-Models
+| Model | What it does | Use when |
+|-------|--------------|----------|
+| `free` | Rotates across all available providers | You want max uptime |
+| `free-fast` | Lowest-latency provider first (Groq, Cerebras, Gemini, NIM) | You're building a chatbot or real-time UI |
+| `free-smart` | Most capable provider first (Gemini, NIM, Groq, Mistral) | You need stronger reasoning or longer context |
 
-Don't pick a provider. Pick a strategy:
-
-| Model | What It Does | Use When |
-|-------|-------------|----------|
-| `free` | Rotates across all available providers evenly | You want maximum uptime |
-| `free-fast` | Routes to the lowest-latency provider first (Groq > Cerebras > Gemini > NIM) | You're building a chatbot or real-time UI |
-| `free-smart` | Routes to the most capable model first (Gemini > NIM > Groq > Mistral) | You need stronger reasoning or longer context |
-
-Need a specific model? Target it directly:
-
-```
-groq/llama-3.3-70b-versatile
-gemini/gemini-2.5-flash
-mistral/mistral-small-latest
-cerebras/llama3.1-8b
-nim/meta/llama-3.3-70b-instruct
-nim/nvidia/llama-3.1-nemotron-70b-instruct
-nim/deepseek-ai/deepseek-r1
-```
+Need a specific model? Target it directly: `groq/llama-3.3-70b-versatile`, `gemini/gemini-2.5-flash`, `nim/deepseek-ai/deepseek-r1`.
 
 ### Multi-key rotation (stack your free tiers)
 
-Every provider env var accepts a comma-separated list of API keys. FreeLLM
-rotates through them round-robin, and each key gets its own independent
-rate-limit budget and cooldown state.
+Every provider env var accepts a comma-separated list. FreeLLM rotates round-robin, and each key gets its own rate-limit budget and cooldown.
 
 ```env
-# Single key (works as before)
-GROQ_API_KEY=gsk_key1
-
-# Four keys -- 4× the free-tier capacity
-GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4
+GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4   # 4× the free RPM
 ```
 
-**How it works:**
+When one key hits its window, FreeLLM silently uses the next. A 429 on `key1` only sidelines that key, not the whole provider. Per-key state is exposed via `GET /v1/status`.
 
-- **Round-robin rotation** — concurrent requests spread across keys automatically
-- **Per-key rate limiting** — when `key1` hits its sliding window, FreeLLM silently uses `key2`, `key3`, `key4`
-- **Per-key cooldowns** — a 429 on one key only sidelines *that* key, not the whole provider
-- **All-keys-exhausted failover** — only when every key is rate-limited does the router move on to the next provider
-- **Concurrency-safe** — each upstream response is mapped to the exact key that produced it via `WeakMap`, so 429s can never be misattributed under load
-
-**The `GET /v1/status` endpoint shows per-key state:**
-
-```json
-{
-  "id": "groq",
-  "keyCount": 4,
-  "keysAvailable": 4,
-  "keys": [
-    { "index": 0, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 },
-    { "index": 1, "rateLimited": false, "requestsInWindow": 11, "maxRequests": 28 },
-    { "index": 2, "rateLimited": true,  "requestsInWindow": 28, "maxRequests": 28, "retryAfterMs": 42000 },
-    { "index": 3, "rateLimited": false, "requestsInWindow": 12, "maxRequests": 28 }
-  ]
-}
-```
-
-**Real-world math:** stack 3 keys per provider across all 5 cloud providers and
-you get ~360 req/min of free inference, including frontier models like Llama
-3.3 70B, Gemini 2.5 Pro, and DeepSeek R1. No other LLM gateway does this
-because they all assume you pay per token.
+Stack 3 keys across all 5 cloud providers and you get ~360 req/min of free inference. No other LLM gateway does this because they all assume you pay per token.
 
 ### Response caching
 
-Identical prompts return cached responses in ~23ms with **zero provider quota
-burn**. The cache keys on `(model, messages, temperature, max_tokens, top_p, stop)`
-via SHA-256, uses LRU eviction, and respects per-entry TTL (default 1 hour).
+Identical prompts return in **~23ms with zero quota burn**. The cache keys on `(model, messages, temperature, max_tokens, top_p, stop)` via SHA-256, uses LRU eviction, and respects per-entry TTL (default 1 hour).
 
 ```
-Call A (cold)             cached=false  latency=200ms  tokens=43+2  → Groq
-Call B (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
-Call C (same prompt)      cached=true   latency=23ms   tokens=0     ← cache
-Call D (different prompt) cached=false  latency=200ms  tokens=new   → Groq
+Call A (cold)             cached=false  latency=200ms  → Groq
+Call B (same prompt)      cached=true   latency=23ms   ← cache
 ```
 
-That's a **9× speedup** on duplicate requests, and the Groq quota only gets
-charged for unique prompts. During development you typically hammer the same
-prompt 10-20 times while iterating — that's now 10-20 free hits.
+That's a 9× speedup on duplicate requests. During development you typically hammer the same prompt 10-20 times while iterating. That's now 10-20 free hits.
 
-**Configuration** (all optional, all in `.env`):
+Configure in `.env`:
 
 ```env
-CACHE_ENABLED=true        # set to "false" to disable
-CACHE_TTL_MS=3600000      # 1 hour default
-CACHE_MAX_ENTRIES=1000    # LRU eviction at 1000
+CACHE_ENABLED=true
+CACHE_TTL_MS=3600000     # 1 hour
+CACHE_MAX_ENTRIES=1000
 ```
 
-**Rules:**
-- Streaming requests are never cached (the SSE protocol is incompatible)
-- Errors are never cached (only successful 2xx responses)
-- Cache hits don't count against the per-provider token quota
-- Cached responses are marked with `x_freellm_cached: true` so clients can tell
+Streaming and error responses are never cached. Cached responses are marked with `x_freellm_cached: true`.
 
-**Implementation:** in-memory LRU (no SQLite, no native modules, no
-persistent volume). Cold cache warms up in seconds, restart loss is
-acceptable for a free-tier gateway, and the entire feature ships with
-zero new dependencies.
+### Securing your gateway
 
-### Token usage tracking
+Both optional. Leave empty for local dev.
 
-Free tiers don't just have RPM limits — they have **daily token caps** (Groq:
-500K/day, Gemini: 1M/day, etc.). FreeLLM tracks every successful request's
-`prompt_tokens` and `completion_tokens` against a rolling 24-hour window, per
-provider, so you always know how much of your free budget is left.
+| Variable | What it does |
+|----------|--------------|
+| `FREELLM_API_KEY` | Requires `Authorization: Bearer <key>` on every request |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allowlist |
 
-The tracker uses hourly buckets internally (24 max per provider, ~576 bytes
-total) — O(1) writes, O(24) reads, no external dependencies.
+## API reference
 
-**`GET /v1/status` returns per-provider and gateway-wide token totals:**
-
-```json
-{
-  "totalRequests": 87,
-  "successRequests": 85,
-  "failedRequests": 2,
-  "usage": {
-    "promptTokens": 142560,
-    "completionTokens": 38912,
-    "totalTokens": 181472,
-    "requestCount": 85
-  },
-  "providers": [
-    {
-      "id": "groq",
-      "usage": {
-        "promptTokens": 78000,
-        "completionTokens": 19200,
-        "totalTokens": 97200,
-        "requestCount": 42
-      }
-    }
-  ]
-}
-```
-
-**The dashboard surfaces it in three places:**
-
-- **Top metrics row** — gateway-wide "Tokens (24h)" card with compact formatting (1234 → "1.2K", 1.5M → "1.50M")
-- **Provider cards** — per-provider amber "TOKENS (24H)" block showing total + `in X · out Y` breakdown for prompt vs completion
-- **Recent requests table** — new "Tokens" column showing `prompt → completion` per request
-
-**Note:** streaming responses currently don't track tokens because the OpenAI
-SSE protocol doesn't guarantee a final `usage` chunk. This will be addressed in
-a future release.
-
-### Request Lifecycle
-
-The complete journey of a request through the gateway:
-
-```mermaid
-flowchart TB
-    Client([Client / OpenAI SDK]) -->|HTTP Request| CORS[CORS Filter]
-    CORS --> RL[Per-Client Rate Limiter]
-    RL -->|Exceeded| R429_1[429 Rate Limited]
-    RL -->|OK| Auth[API Key Auth]
-    Auth -->|Invalid| R401[401 Unauthorized]
-    Auth -->|Valid / No key set| Router[Express Router]
-    
-    Router -->|/healthz| Health[200 OK]
-    Router -->|/v1/models| Models[List Models]
-    Router -->|/v1/status| Status[Gateway Status]
-    Router -->|/v1/chat/completions| Validate[Zod Validation]
-    
-    Validate -->|Invalid| R400[400 Bad Request]
-    Validate -->|Valid| Stream{stream?}
-    
-    Stream -->|false| GW[Gateway Router]
-    Stream -->|true| GWS[Gateway Router]
-    
-    GW --> Pick
-    GWS --> Pick
-
-    subgraph Gateway["Gateway Failover Loop"]
-        Pick[Pick Provider] --> CB{Circuit Breaker}
-        CB -->|Open| Exclude[Exclude Provider]
-        CB -->|Closed / Half-Open| RateCheck{Rate Limited?}
-        RateCheck -->|Yes| Exclude
-        RateCheck -->|No| Send[Send to Provider]
-        Send -->|200 OK| Success[Mark Healthy]
-        Send -->|429| OnRL[Mark Rate Limited]
-        OnRL --> Exclude
-        Send -->|5xx| OnErr[Trip Breaker]
-        OnErr --> Exclude
-        Send -->|4xx| ClientErr[Return Error]
-        Exclude --> More{More Providers?}
-        More -->|Yes| Pick
-        More -->|No| Exhausted[All Exhausted]
-    end
-    
-    Success -->|Non-streaming| JSON[JSON Response]
-    Success -->|Streaming| SSE[SSE Stream]
-    Exhausted --> R429_2[429 All Providers Exhausted]
-    ClientErr --> R4xx[4xx Provider Error]
-    
-    JSON --> Client
-    SSE --> Client
-```
-
-### Circuit Breaker States
-
-Each provider has an independent circuit breaker that protects against cascading failures:
-
-```mermaid
-stateDiagram-v2
-    [*] --> Closed
-    
-    Closed --> Open : 3 consecutive failures
-    Open --> HalfOpen : 30s timeout expires
-    HalfOpen --> Closed : 2 successes
-    HalfOpen --> Open : Any failure
-    
-    Closed --> Closed : Success (reset counter)
-    Open --> Open : Requests blocked
-
-    state Closed {
-        [*] : Requests flow normally
-    }
-    state Open {
-        [*] : All requests rejected
-    }
-    state HalfOpen {
-        [*] : Testing with limited requests
-    }
-```
-
-### Routing and Failover
-
-```mermaid
-flowchart LR
-    subgraph Meta-Models
-        Free[free] -->|Round-robin| All[All Providers]
-        Fast[free-fast] -->|Priority| FastOrder[Groq → Cerebras → Gemini → NIM → Mistral → Ollama]
-        Smart[free-smart] -->|Priority| SmartOrder[Gemini → NIM → Groq → Mistral → Cerebras → Ollama]
-    end
-```
-
-All thresholds are configurable:
-
-| Variable | Default | What It Controls |
-|----------|---------|-----------------|
-| `CB_FAILURE_THRESHOLD` | `3` | Consecutive failures before tripping open |
-| `CB_SUCCESS_THRESHOLD` | `2` | Successes needed in half-open to recover |
-| `CB_TIMEOUT_MS` | `30000` | Wait time before testing an open breaker |
-
-### Securing Your Gateway
-
-Both settings are optional. Leave them empty for local development.
-
-| Variable | What It Does |
-|----------|-------------|
-| `FREELLM_API_KEY` | When set, every request must include `Authorization: Bearer <key>`. Prevents unauthorized use of your gateway. |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins (e.g. `https://myapp.com,https://admin.myapp.com`). When empty, all origins are allowed. |
-
-**For production deployments**, set both:
-
-```env
-FREELLM_API_KEY=some-secret-key-here
-ALLOWED_ORIGINS=https://myapp.com
-```
-
-Then pass your key in requests:
-
-```bash
-curl http://your-server.com/v1/chat/completions \
-  -H "Authorization: Bearer some-secret-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "free-fast", "messages": [{"role": "user", "content": "Hello!"}]}'
-```
-
-## API Reference
-
-Fully OpenAI-compatible. Available at `/v1/...` (direct) and `/api/v1/...` (proxied via dashboard).
+Fully OpenAI-compatible. Available at `/v1/...`.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/v1/chat/completions` | Chat completion (streaming and non-streaming) |
 | `GET` | `/v1/models` | List all available models + meta-models |
-| `GET` | `/v1/status` | Gateway health, provider states, per-key state, token usage, cache stats, recent requests |
+| `GET` | `/v1/status` | Provider states, per-key state, token usage, cache stats |
 | `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
 | `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` |
 
@@ -480,125 +196,13 @@ Every response includes an `x_freellm_provider` header so you know which provide
 
 ## Dashboard
 
-A built-in web UI for monitoring your gateway in real time:
-
-- **Provider health** -- see which providers are healthy, rate-limited, or failing
-- **Cache hits** -- new metric card showing total hits + hit rate (cyan)
-- **Token usage** -- per-provider amber "Tokens (24h)" blocks with prompt/completion breakdown
-- **Multi-key status** -- providers with stacked keys show a `keysAvailable / keyCount` badge
-- **Live request log** -- every request with model, provider, latency, status, token counts, and a `CACHE` badge for cached rows
-- **Routing controls** -- switch strategies without restarting the server
-- **Circuit breaker management** -- manually reset a tripped provider when you know it's back
+A built-in web UI for monitoring your gateway in real time. Provider health, cache hit rate, per-provider token usage, multi-key status, live request log, routing controls, and circuit breaker management.
 
 ![Models Page](docs/screenshots/models.png)
 
-## Architecture
-
-```mermaid
-graph TB
-    subgraph Client Layer
-        SDK([OpenAI SDK / curl])
-        Dashboard([Dashboard SPA])
-    end
-
-    subgraph API Server ["API Server (Express 5)"]
-        direction TB
-        MW["Middleware Stack<br/>CORS → Rate Limit → Auth → Body Parser"]
-        
-        subgraph Routes
-            Health["/healthz"]
-            Chat["/v1/chat/completions"]
-            ModelsRoute["/v1/models"]
-            StatusRoute["/v1/status"]
-        end
-        
-        subgraph Gateway
-            GWRouter["Gateway Router<br/>Failover + Strategy"]
-            Registry["Provider Registry"]
-            CB["Circuit Breakers<br/>(per provider)"]
-            RateLim["Rate Limiters<br/>(per provider)"]
-            ReqLog["Request Log<br/>(in-memory, 500 max)"]
-        end
-        
-        ErrHandler["Error Handler"]
-    end
-
-    subgraph Providers ["LLM Providers"]
-        Groq([Groq])
-        Gemini([Gemini])
-        Mistral([Mistral])
-        Cerebras([Cerebras])
-        NIM([NVIDIA NIM])
-        Ollama([Ollama])
-    end
-
-    SDK --> MW
-    Dashboard --> MW
-    MW --> Routes
-    Chat --> GWRouter
-    GWRouter --> Registry
-    Registry --> CB
-    Registry --> RateLim
-    GWRouter --> Providers
-    GWRouter --> ReqLog
-    GWRouter --> ErrHandler
-    StatusRoute --> ReqLog
-    StatusRoute --> Registry
-```
-
-### Project Structure
-
-```
-packages/
-  api-server/              Express 5 + TypeScript
-    gateway/
-      config.ts              Constants (meta-models, priorities, limits)
-      router.ts              Failover loop with round-robin/random
-      registry.ts            Provider lifecycle management
-      circuit-breaker.ts     Three-state health tracking
-      rate-limiter.ts        Sliding-window + cooldown
-      schemas.ts             Zod validation schemas
-      providers/             One adapter per provider
-    middleware/
-      auth.ts                API key auth (timing-safe)
-      admin-auth.ts          Admin-only route protection
-      rate-limit.ts          Per-client IP rate limiting
-      error-handler.ts       Centralized error formatting
-      validate.ts            Zod validation middleware
-    routes/v1/               OpenAI-compatible HTTP handlers
-
-  dashboard/               React 18 + Vite + Tailwind
-    components/              Focused, single-responsibility UI
-    pages/                   Dashboard, Models, Quickstart
-
-lib/
-  api-spec/                OpenAPI 3.1 spec (source of truth)
-  api-client-react/        Auto-generated React Query hooks
-```
-
-## Tech Stack
-
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
-![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
-![Radix UI](https://img.shields.io/badge/Radix_UI-161618?style=for-the-badge&logo=radixui&logoColor=white)
-![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
-![React Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
-![pnpm](https://img.shields.io/badge/pnpm-F69220?style=for-the-badge&logo=pnpm&logoColor=white)
-![OpenAPI](https://img.shields.io/badge/OpenAPI-6BA539?style=for-the-badge&logo=openapiinitiative&logoColor=white)
-![Pino](https://img.shields.io/badge/Pino-687634?style=for-the-badge&logoColor=white)
-
 ## Contributing
 
-```bash
-git checkout -b feat/your-feature
-# make changes
-git commit -m "feat: describe what you built"
-git push origin feat/your-feature
-# open a PR
-```
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
