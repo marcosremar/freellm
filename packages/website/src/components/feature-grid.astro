@@ -3,13 +3,13 @@
 // Bento layout: first 2 cards span 6 cols (wide), rest span 4 cols (narrower)
 const features = [
   {
-    title: "OpenAI-compatible",
-    desc: "Drop-in replacement. Change one line — your base URL — and your existing OpenAI SDK code keeps working.",
+    title: "Drop-in OpenAI SDK",
+    desc: "Change one line. Your base URL. Your existing OpenAI SDK code keeps working against six providers.",
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><circle cx="12" cy="12" r="3"/></svg>`,
   },
   {
     title: "Automatic failover",
-    desc: "Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras. You always get a response.",
+    desc: "Groq rate-limited? Your request silently routes to Gemini, then Mistral, then Cerebras. You stop seeing 429s.",
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   },
   {
@@ -28,8 +28,8 @@ const features = [
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>`,
   },
   {
-    title: "Smart meta-models",
-    desc: "Pick a strategy, not a provider. free-fast for speed, free-smart for capability, free for max uptime.",
+    title: "Three meta-models",
+    desc: "Pick a strategy, not a provider. free-fast for speed, free-smart for reasoning, free for max uptime.",
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
   },
   {
@@ -59,8 +59,8 @@ const features = [
       </span>
       <h2>Everything you need to run LLMs for free</h2>
       <p class="lead">
-        Production-grade routing, observability, and reliability — built specifically
-        for free-tier providers. Not a generic gateway with free tier as an afterthought.
+        Routing, observability, and recovery built specifically for free-tier providers.
+        Not a generic gateway with free tier as an afterthought.
       </p>
     </div>
     <div class="feature-grid">

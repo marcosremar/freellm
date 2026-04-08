@@ -3,7 +3,7 @@ title: Meta-Models
 description: Pick a routing strategy instead of a specific provider.
 ---
 
-Don't pick a provider — pick a strategy. FreeLLM exposes three meta-models that route across providers based on what you care about.
+Don't pick a provider. Pick a strategy. FreeLLM exposes three meta-models that route across providers based on what you care about.
 
 | Model | Strategy | Best For |
 |-------|----------|----------|
@@ -25,4 +25,4 @@ nim/nvidia/llama-3.1-nemotron-70b-instruct
 nim/deepseek-ai/deepseek-r1
 ```
 
-When you target a specific provider model, FreeLLM still applies multi-key rotation, circuit breakers, and rate-limit tracking — you just lose the cross-provider failover.
+When you target a specific provider model, FreeLLM still applies multi-key rotation, circuit breakers, and rate-limit tracking. You just lose the cross-provider failover.

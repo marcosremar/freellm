@@ -7,7 +7,7 @@ Identical chat completions return cached responses in ~23ms with **zero provider
 
 ## Why this matters for free-tier developers
 
-During development you typically iterate on the same prompt 10-20 times — tweaking the system message, comparing outputs, debugging. Without caching, each iteration burns a provider request and a slice of your daily token quota. With caching, only the first iteration costs anything; the rest are free hits.
+During development you typically iterate on the same prompt 10-20 times. Tweaking the system message, comparing outputs, debugging. Without caching, each iteration burns a provider request and a slice of your daily token quota. With caching, only the first iteration costs anything. The rest are free hits.
 
 A typical dev session of 100 chat completions might collapse to 30-40 unique prompts. That's a **60-70% reduction** in provider quota usage with no code changes on your end.
 
@@ -24,12 +24,12 @@ That's a **9× speedup** on duplicate requests, and the Groq quota only gets cha
 
 ## How it works
 
-1. **Cache key** — `sha256(JSON.stringify({model, messages, temperature, max_tokens, top_p, stop}))`
-2. **Cache lookup** — happens BEFORE the routing loop, on every non-streaming request
-3. **Cache hit** — short-circuits the entire flow: no provider call, no token tracker increment, no rate limiter increment
-4. **Cache miss** — runs the normal failover loop, then writes the successful response back to cache
-5. **LRU eviction** — at capacity, the oldest entry is dropped (Map re-insertion keeps recently-used entries at the end)
-6. **TTL expiry** — each entry has its own `expiresAt`, checked on read
+1. **Cache key.** `sha256(JSON.stringify({model, messages, temperature, max_tokens, top_p, stop}))`
+2. **Cache lookup.** Happens BEFORE the routing loop, on every non-streaming request.
+3. **Cache hit.** Short-circuits the entire flow: no provider call, no token tracker increment, no rate limiter increment.
+4. **Cache miss.** Runs the normal failover loop, then writes the successful response back to cache.
+5. **LRU eviction.** At capacity, the oldest entry is dropped (Map re-insertion keeps recently-used entries at the end).
+6. **TTL expiry.** Each entry has its own `expiresAt`, checked on read.
 
 ## Configuration
 
@@ -39,7 +39,7 @@ CACHE_TTL_MS=3600000      # 1 hour default
 CACHE_MAX_ENTRIES=1000    # LRU eviction at 1000
 ```
 
-All optional. Sensible defaults — you don't need to set anything.
+All optional. Sensible defaults. You don't need to set anything.
 
 ## Rules
 

@@ -9,10 +9,10 @@ Three ways to get FreeLLM running. Pick whichever fits your workflow.
 
 The fastest path. Click a button, sign in, paste your provider API keys, done.
 
-- [Deploy on Railway](https://railway.com/deploy/_0jAQr) — reads `railway.json` automatically
-- [Deploy to Render](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm) — reads `render.yaml` automatically
+- [Deploy on Railway](https://railway.com/deploy/_0jAQr) (reads `railway.json` automatically)
+- [Deploy to Render](https://render.com/deploy?repo=https://github.com/Devansh-365/freellm) (reads `render.yaml` automatically)
 
-Your gateway is live in under 2 minutes — no clone, no Docker, no terminal.
+Your gateway is live in under 2 minutes. No clone, no Docker, no terminal.
 
 ## Option B: Docker
 
@@ -83,4 +83,4 @@ print(response.choices[0].message.content)
 print("Provider used:", response.x_freellm_provider)
 ```
 
-The `x_freellm_provider` field on the response tells you which upstream provider handled the request — useful for debugging routing decisions.
+The `x_freellm_provider` field on the response tells you which upstream provider handled the request. Useful for debugging routing decisions.

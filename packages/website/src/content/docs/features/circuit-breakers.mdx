@@ -11,11 +11,11 @@ CLOSED (healthy) ──3 failures──> OPEN (failing) ──30s──> HALF-OP
        └─────────── 2 successes in half-open ────────────────────┘
 ```
 
-**Closed** — Requests flow normally. Failure counter resets on success.
+**Closed.** Requests flow normally. Failure counter resets on success.
 
-**Open** — All requests to this provider are blocked. After 30 seconds, the breaker transitions to half-open to test recovery.
+**Open.** All requests to this provider are blocked. After 30 seconds, the breaker transitions to half-open to test recovery.
 
-**Half-Open** — One request is allowed through. If 2 successive successes occur, the breaker closes. If any failure occurs, it returns to open.
+**Half-Open.** One request is allowed through. If 2 successive successes occur, the breaker closes. If any failure occurs, it returns to open.
 
 ## Configuration
 
