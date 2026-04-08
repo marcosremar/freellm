@@ -19,7 +19,7 @@ Stack 3 keys per provider and you get **~360 free requests per minute**. Includi
 
 Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
 
-[Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard)
+**[Website](https://freellms.vercel.app)** · **[Docs](https://freellms.vercel.app/introduction/)** · [Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard)
 
 **If you've ever burned $20 testing prompts, [star the repo](https://github.com/Devansh-365/freellm). It helps other builders find it.**
 
