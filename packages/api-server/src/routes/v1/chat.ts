@@ -3,18 +3,30 @@ import type { Request, Response, NextFunction } from "express";
 import { router as gatewayRouter, AllProvidersExhaustedError, ProviderClientError } from "../../gateway/index.js";
 import { logger } from "../../lib/logger.js";
 import type { ChatCompletionRequest } from "../../gateway/types.js";
+import type { RouteMeta } from "../../gateway/router.js";
 import { validate } from "../../middleware/validate.js";
 import { chatCompletionRequestSchema } from "../../gateway/schemas.js";
+import { parseStrictHeader } from "../../gateway/strict.js";
 
 const chatRouter: IRouter = Router();
 
+/** Set the X-FreeLLM-* observability headers on a response. */
+function setRouteHeaders(res: Response, meta: RouteMeta): void {
+  res.setHeader("X-FreeLLM-Provider", meta.provider);
+  res.setHeader("X-FreeLLM-Model", meta.resolvedModel);
+  res.setHeader("X-FreeLLM-Requested-Model", meta.requestedModel);
+  res.setHeader("X-FreeLLM-Cached", meta.cached ? "true" : "false");
+  res.setHeader("X-FreeLLM-Route-Reason", meta.reason);
+}
+
 chatRouter.post("/completions", validate(chatCompletionRequestSchema), async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body as ChatCompletionRequest;
+  const strict = parseStrictHeader(req.header("x-freellm-strict"));
 
   if (body.stream) {
-    await handleStreamingRequest(req, res, body);
+    await handleStreamingRequest(req, res, body, strict, next);
   } else {
-    await handleNonStreamingRequest(req, res, body, next);
+    await handleNonStreamingRequest(req, res, body, strict, next);
   }
 });
 
@@ -22,10 +34,12 @@ async function handleNonStreamingRequest(
   _req: Request,
   res: Response,
   body: ChatCompletionRequest,
+  strict: boolean,
   next: NextFunction,
 ) {
   try {
-    const data = await gatewayRouter.complete(body);
+    const { data, meta } = await gatewayRouter.complete(body, { strict });
+    setRouteHeaders(res, meta);
     res.json(data);
   } catch (err) {
     next(err);
@@ -33,20 +47,31 @@ async function handleNonStreamingRequest(
 }
 
 async function handleStreamingRequest(
-  req: Request,
+  _req: Request,
   res: Response,
   body: ChatCompletionRequest,
+  strict: boolean,
+  next: NextFunction,
 ) {
   const startTime = Date.now();
 
   try {
-    const { response, provider, resolvedModel, latencyMs } =
-      await gatewayRouter.routeStream(body);
+    const { response, provider, resolvedModel, latencyMs, attempted, failoverCount } =
+      await gatewayRouter.routeStream(body, { strict });
+
+    const meta: RouteMeta = {
+      provider: provider.id,
+      resolvedModel,
+      requestedModel: body.model,
+      cached: false,
+      reason: failoverCount > 0 ? "failover" : body.model.startsWith("free") ? "meta" : "direct",
+      attempted,
+    };
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-FreeLLM-Provider", provider.id);
+    setRouteHeaders(res, meta);
     res.flushHeaders();
 
     if (!response.body) {
@@ -112,15 +137,12 @@ async function handleStreamingRequest(
         streaming: true,
       });
       if (!res.headersSent) {
-        res.status(err.statusCode).json({
-          error: { message: err.message, type: "provider_error" },
-        });
+        return next(err);
       }
       return;
     }
 
     if (err instanceof AllProvidersExhaustedError) {
-      // Log the exhaustion before responding
       gatewayRouter.requestLog.add({
         requestedModel: body.model,
         latencyMs: elapsed,
@@ -130,15 +152,9 @@ async function handleStreamingRequest(
       });
 
       if (!res.headersSent) {
-        res.status(429).json({
-          error: {
-            message: err.message,
-            type: "rate_limit_error",
-            code: "all_providers_exhausted",
-          },
-        });
-        return;
+        return next(err);
       }
+      // Headers already flushed mid-stream — surface as SSE error frame.
       res.write(`data: ${JSON.stringify({ error: { message: err.message } })}\n\n`);
       res.write("data: [DONE]\n\n");
       res.end();
@@ -155,12 +171,9 @@ async function handleStreamingRequest(
     });
 
     if (!res.headersSent) {
-      res.status(500).json({
-        error: { message: "Gateway error", type: "internal_error" },
-      });
-    } else {
-      res.end();
+      return next(err);
     }
+    res.end();
   }
 }
 

@@ -5,6 +5,22 @@ import { RequestLog } from "./request-log.js";
 import { UsageTracker } from "./usage-tracker.js";
 import { ResponseCache } from "./cache.js";
 import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
+import { assertStrictModeAllowed } from "./strict.js";
+
+export type RouteReason = "direct" | "meta" | "cache" | "failover";
+
+export interface RouteMeta {
+  provider: string;
+  resolvedModel: string;
+  requestedModel: string;
+  cached: boolean;
+  reason: RouteReason;
+  attempted: string[];
+}
+
+export interface RouteOptions {
+  strict?: boolean;
+}
 
 const ROUTE_TIMEOUT_MS = parseInt(process.env["ROUTE_TIMEOUT_MS"] ?? "30000", 10);
 
@@ -79,12 +95,22 @@ export class GatewayRouter {
     return requestedModel;
   }
 
-  async route(request: ChatCompletionRequest): Promise<{
+  async route(
+    request: ChatCompletionRequest,
+    options: RouteOptions = {},
+  ): Promise<{
     response: Response;
     provider: ProviderAdapter;
     resolvedModel: string;
+    attempted: string[];
+    failoverCount: number;
   }> {
+    const strict = options.strict === true;
+    assertStrictModeAllowed(request.model, strict);
+
     const excluded = new Set<string>();
+    const attempted: string[] = [];
+    let failoverCount = 0;
     const deadline = Date.now() + ROUTE_TIMEOUT_MS;
 
     while (true) {
@@ -104,6 +130,8 @@ export class GatewayRouter {
         );
       }
 
+      if (!attempted.includes(provider.id)) attempted.push(provider.id);
+
       const resolvedModel = this.resolveModelForProvider(request.model, provider);
       const mappedRequest = { ...request, model: resolvedModel };
 
@@ -118,6 +146,11 @@ export class GatewayRouter {
           if (!provider.isAvailable()) {
             excluded.add(provider.id);
           }
+          // Strict mode never falls back to a different provider.
+          if (strict) {
+            throw new ProviderClientError(provider.id, response.status, response);
+          }
+          failoverCount++;
           continue;
         }
 
@@ -128,31 +161,47 @@ export class GatewayRouter {
         if (response.status >= 500) {
           provider.onError();
           excluded.add(provider.id);
+          if (strict) {
+            throw new ProviderClientError(provider.id, response.status, response);
+          }
+          failoverCount++;
           continue;
         }
 
         if (!response.ok) {
           provider.onError();
           excluded.add(provider.id);
+          if (strict) {
+            throw new ProviderClientError(provider.id, response.status, response);
+          }
+          failoverCount++;
           continue;
         }
 
         provider.onSuccess(response);
-        return { response, provider, resolvedModel };
+        return { response, provider, resolvedModel, attempted, failoverCount };
       } catch (err) {
         if (err instanceof ProviderClientError) throw err;
         provider.onError();
         excluded.add(provider.id);
+        if (strict) throw err;
+        failoverCount++;
       }
     }
   }
 
-  async complete(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+  async complete(
+    request: ChatCompletionRequest,
+    options: RouteOptions = {},
+  ): Promise<{ data: ChatCompletionResponse; meta: RouteMeta }> {
     const startTime = Date.now();
+    const strict = options.strict === true;
 
     // Cache check FIRST. Hits short-circuit the entire routing flow:
     // no provider call, no token quota burn, ~0ms latency.
-    const cached = this.cache.get(request);
+    // Strict mode disables the cache because a cached response may have
+    // come from a different provider than the caller expects.
+    const cached = strict ? null : this.cache.get(request);
     if (cached) {
       const latencyMs = Date.now() - startTime;
       const data: ChatCompletionResponse = {
@@ -173,11 +222,20 @@ export class GatewayRouter {
         cached: true,
       });
 
-      return data;
+      const meta: RouteMeta = {
+        provider: cached.provider,
+        resolvedModel: cached.response.model,
+        requestedModel: request.model,
+        cached: true,
+        reason: "cache",
+        attempted: [cached.provider],
+      };
+      return { data, meta };
     }
 
     try {
-      const { response, provider, resolvedModel } = await this.route(request);
+      const { response, provider, resolvedModel, attempted, failoverCount } =
+        await this.route(request, options);
       const latencyMs = Date.now() - startTime;
 
       const data = (await response.json()) as ChatCompletionResponse;
@@ -206,7 +264,19 @@ export class GatewayRouter {
       // The cache class skips streaming and disabled state internally.
       this.cache.set(request, data, provider.id, promptTokens, completionTokens);
 
-      return data;
+      const meta: RouteMeta = {
+        provider: provider.id,
+        resolvedModel,
+        requestedModel: request.model,
+        cached: false,
+        reason: META_MODELS.has(request.model)
+          ? "meta"
+          : failoverCount > 0
+            ? "failover"
+            : "direct",
+        attempted,
+      };
+      return { data, meta };
     } catch (err) {
       const latencyMs = Date.now() - startTime;
 
@@ -232,14 +302,19 @@ export class GatewayRouter {
     }
   }
 
-  async routeStream(request: ChatCompletionRequest): Promise<{
+  async routeStream(
+    request: ChatCompletionRequest,
+    options: RouteOptions = {},
+  ): Promise<{
     response: Response;
     provider: ProviderAdapter;
     resolvedModel: string;
     latencyMs: number;
+    attempted: string[];
+    failoverCount: number;
   }> {
     const startTime = Date.now();
-    const result = await this.route(request);
+    const result = await this.route(request, options);
     return { ...result, latencyMs: Date.now() - startTime };
   }
 }
