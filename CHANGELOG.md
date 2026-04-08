@@ -5,6 +5,285 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-09
+
+The honest-gateway release. FreeLLM now tells you exactly which provider
+answered your request, lets you refuse silent downgrades, routes around
+providers that train on your prompts, returns enriched retry hints on 429s,
+and can be safely exposed to an app's end users via virtual sub-keys and
+per-identifier rate limiting. Everything ships with a real test suite and
+no new runtime dependencies.
+
+### Added
+
+#### Transparent routing headers
+
+Every chat completion response now carries observability headers so
+clients can see exactly how the request was handled:
+
+- `X-FreeLLM-Provider` — the concrete provider id that served the response
+- `X-FreeLLM-Model` — the resolved concrete model id
+- `X-FreeLLM-Requested-Model` — the original model asked for
+- `X-FreeLLM-Cached` — `true` when the response came from the cache
+- `X-FreeLLM-Route-Reason` — one of `direct`, `meta`, `cache`, `failover`
+- `X-Request-Id` — a unique trace id that also appears in logs and error bodies
+
+#### Strict mode
+
+Opt-in via `X-FreeLLM-Strict: true`. In strict mode the router refuses
+to substitute models. Meta-models (`free`, `free-fast`, `free-smart`)
+are rejected with a clear 400. Concrete models are tried against
+exactly one provider and the upstream error surfaces verbatim if that
+provider fails. No silent failover, no cache hit masquerading as fresh.
+
+#### Actionable 429 bodies
+
+When all providers are exhausted, the gateway now returns a structured
+body instead of a generic error:
+
+```json
+{
+  "error": {
+    "type": "rate_limit_error",
+    "code": "all_providers_exhausted",
+    "message": "...",
+    "retry_after_ms": 12000,
+    "providers": [
+      { "id": "groq",   "retry_after_ms": 12000, "keys_available": 0, "keys_total": 1, "circuit_state": "closed" },
+      { "id": "gemini", "retry_after_ms": 5000,  "keys_available": 0, "keys_total": 1, "circuit_state": "closed" }
+    ],
+    "suggestions": [
+      { "model": "free-fast",  "available_in_ms": 5000 },
+      { "model": "free-smart", "available_in_ms": 5000 }
+    ],
+    "request_id": "..."
+  }
+}
+```
+
+The response also carries an HTTP `Retry-After` header in seconds.
+
+#### Unified error SDK
+
+New `src/errors/` module defines the one and only error taxonomy the
+gateway emits. Fifteen concrete error codes grouped into seven types
+that match OpenAI's shape (`invalid_request_error`, `authentication_error`,
+`permission_error`, `not_found_error`, `rate_limit_error`, `provider_error`,
+`internal_error`). Every middleware delegates via `next(freellmError(...))`
+instead of writing response bodies directly, and the central error
+handler funnels everything through a single `toBody()` serializer.
+
+- `freellmError({ code, message, ...context })` factory
+- `httpStatusFor(code)` and `typeFor(code)` lookup tables
+- `toBody(err, requestId)` never throws, falls back to
+  `internal_server_error` envelope for unknown input
+- `redactSecrets(message)` strips Bearer tokens, API-key-looking values,
+  and long hex sequences from error messages before they go on the wire
+
+#### Request id propagation
+
+New `request-id` middleware mounts first in the pipeline and assigns
+every request a UUID (honors an inbound `X-Request-Id` matching
+`^[A-Za-z0-9_.:-]{1,128}$` so distributed traces can thread through).
+The same id flows into the response header, the error body, and every
+pino log line via `genReqId` so a single grep correlates access logs,
+error logs, and bug reports.
+
+#### Privacy and training-policy routing
+
+New `X-FreeLLM-Privacy: no-training` header filters the router's
+candidate list to providers that contractually exclude free-tier data
+from training. Backed by a new `PROVIDER_PRIVACY` catalog with source
+URLs and last-verified dates for every shipped provider:
+
+| Provider   | Policy             |
+|------------|--------------------|
+| Groq       | no-training        |
+| Cerebras   | no-training        |
+| NVIDIA NIM | no-training        |
+| Ollama     | local              |
+| Mistral    | configurable       |
+| Gemini     | free-tier trains   |
+
+When no provider can satisfy the posture for the requested model, the
+gateway returns a 400 `model_not_supported` up front instead of
+pointlessly cycling through the exclusion list. Server logs a warning
+at boot for any catalog entry older than 90 days so operators re-verify
+against the provider's current ToS.
+
+#### Robust Retry-After handling
+
+Upstream `Retry-After` headers are now parsed in both integer-seconds
+and HTTP-date formats, clamped into `[1s, 10min]`, and honored on 5xx
+responses as well as 429s. Absurd values like `99999999` can no longer
+lock a key out for years, and past HTTP dates floor to one second.
+
+#### Per-identifier rate limiting
+
+Every request can now carry an `X-FreeLLM-Identifier` header tagging it
+with a logical identity (app user id, session token, anything that
+fits `^[A-Za-z0-9_.:-]{1,128}$`). The gateway tracks requests per
+identifier in an independent sliding-window bucket. One noisy user
+hitting their cap doesn't affect anyone else.
+
+- Configurable via `FREELLM_IDENTIFIER_LIMIT=<max>/<windowMs>`, default 60/60000
+- Hard ceiling of `FREELLM_IDENTIFIER_MAX_BUCKETS` distinct identifiers (default 10000) with LRU eviction on overflow
+- Idle buckets garbage-collected after 2x the window
+- Synchronous check-and-increment so concurrent requests cannot race
+- Missing header falls back to `ip:<client-ip>`
+- Literal `"undefined"` or `"null"` strings are treated as missing
+- Tainted values (control chars, spaces, too long) are rejected with a clear 400 instead of silently entering logs
+- Responses carry `X-FreeLLM-Identifier`, `X-FreeLLM-Identifier-Remaining`, and `X-FreeLLM-Identifier-Reset` so clients can self-throttle
+
+#### Virtual sub-keys with soft caps
+
+Operators can now declare virtual sub-keys in a JSON file pointed at by
+`FREELLM_VIRTUAL_KEYS_PATH`. Each key can carry its own request cap,
+token cap, model allowlist, and expiry:
+
+```json
+{
+  "keys": [
+    {
+      "id": "sk-freellm-portfolio-abc123",
+      "label": "My portfolio site",
+      "dailyRequestCap": 500,
+      "dailyTokenCap": 200000,
+      "allowedModels": ["free-fast", "free"],
+      "expiresAt": "2026-07-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+The store is loaded at boot, Zod-validated, and rejects duplicate ids
+and files larger than 1 MB. Virtual keys authenticate via
+`Authorization: Bearer sk-freellm-...` alongside the existing
+`FREELLM_API_KEY` master key. The chat route guards each request via
+`assertCanServe` BEFORE routing to a provider (expiry, model allowlist,
+request cap, token cap) and records usage AFTER a successful upstream
+response, so failed routes never burn quota. Each cap hit returns its
+own typed error: `virtual_key_cap_reached`, `model_not_supported`,
+`invalid_api_key`.
+
+Counters are in-memory, rolling 24 hours, **reset on restart**. This
+is explicitly a soft cap (runaway-loop and abuse protection, not a
+billing system). The server logs a loud warning at boot when any
+virtual keys are loaded so operators cannot mistake it for billing.
+
+#### Security, privacy, and benchmarks pages
+
+Three new pages on the documentation website grouped under a new
+**Trust** section:
+
+- `/security` lists the six direct production dependencies, what is
+  deliberately not in the codebase (no telemetry, no runtime code
+  generation, no plugin loaders, no install-time scripts), how to
+  verify a deployed Docker image, and where to report vulnerabilities
+- `/privacy` renders the provider training-policy catalog with links
+  to each provider's own terms of service
+- `/benchmarks` publishes cold-start and per-request overhead numbers
+  rendered from `docs/benchmarks.json` with a methodology section
+
+#### Reproducible benchmark script
+
+New `scripts/bench.mjs` spawns the built server against a fake
+in-process upstream, measures boot time to first `/healthz` 200, then
+runs cache-miss and cache-hit passes and writes `docs/benchmarks.json`.
+Run it locally with `node scripts/bench.mjs --print`.
+
+Reference numbers on a developer laptop:
+
+- Cold start: ~127 ms (spawn to first `/healthz` 200)
+- Cache-miss overhead: p50 0.69 ms, p99 1.37 ms
+- Cache-hit overhead: p50 0.34 ms, p99 0.92 ms
+
+#### Continuous integration
+
+New `.github/workflows/ci.yml` runs `pnpm -r typecheck`, the api-server
+test suite, and `pnpm audit --prod --audit-level=moderate` on every
+push and every pull request. Audit failures are tracked through
+`.github/audit-allowlist.json` (a process contract, not an automated
+bypass). Supports future badge wiring.
+
+#### Test suite
+
+FreeLLM now ships with 141 passing tests (up from 0) across eleven
+test files, all green on every commit via CI:
+
+- `errors.test.ts` — exhaustive code-to-status and code-to-type coverage, factory, guard, serializer, and redact helpers
+- `errors-integration.test.ts` — X-Request-Id propagation, canonical shape on 400/401 paths
+- `strict.test.ts` — header parser, meta-model rejection
+- `retry-advice.test.ts` — per-provider and global earliest-retry math, hint ordering, suggestions
+- `retry-after.test.ts` — integer, fractional, HTTP-date, clamping at both ends, every invalid input
+- `privacy.test.ts` — header parsing, catalog exhaustiveness, satisfaction (including unknown-id fail-closed), staleness math
+- `identifier-limiter.test.ts` — sliding window, LRU, TTL, isolation, env parser
+- `virtual-keys.test.ts` — construction, duplicate rejection, expiry, allowedModels, rolling-window cap enforcement, file loading edge cases
+- `router.test.ts` — direct, failover, strict mode, privacy routing, Retry-After plumbing
+- `e2e.test.ts` — real Express app against a fake upstream, full header assertions
+- `multi-tenant-e2e.test.ts` — virtual key auth, cap enforcement, identifier middleware end-to-end
+
+### Changed
+
+- `GatewayRouter.complete()` now returns `{ data, meta }` with full
+  route metadata (provider, resolvedModel, requestedModel, cached,
+  reason, attempted providers) instead of just the chat completion
+- The central `errorHandler` runs every error class through
+  `normalizeError` + `toBody`, replacing the previous per-class
+  `instanceof` branching and ad hoc JSON shaping
+- `AllProvidersExhaustedError` and `ProviderClientError` are now
+  internal signals only; callers never see the class name on the wire
+- `auth` middleware accepts either the master key or a virtual key,
+  populates `req.virtualKey` on virtual-key matches
+- `validate` middleware sanitizes Zod error messages via
+  `redactSecrets` so prompts containing leaked API keys cannot echo
+  back in the error
+- `rate-limit` middleware swapped to `express-rate-limit`'s `handler`
+  hook so its 429 body matches every other 429 the gateway produces
+- Website build toolchain (`astro`, `@astrojs/starlight`,
+  `@astrojs/check`, `sharp`, `typescript`) moved from `dependencies`
+  to `devDependencies` so `pnpm audit --prod` does not traverse
+  build-only packages
+
+### Fixed
+
+- Patched three GitHub Security Advisories flagged by the new CI audit
+  step: **GHSA-p9ff-h696-f583** (high) and **GHSA-4w7w-66w2-5vf9**
+  (moderate) for Vite below 6.4.2, and **GHSA-48c2-rrv3-qjmp**
+  (moderate) for yaml below 2.8.3 buried under `@astrojs/check`.
+  Fixed via `pnpm.overrides` in the root `package.json` forcing the
+  patched versions regardless of transitive chain, a workspace
+  catalog bump to `vite ^6.4.2`, and moving the website build
+  toolchain to `devDependencies`.
+
+### Configuration
+
+New environment variables:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `FREELLM_IDENTIFIER_LIMIT` | `60/60000` | Per-identifier rate limit, format `<max>/<windowMs>` |
+| `FREELLM_IDENTIFIER_MAX_BUCKETS` | `10000` | Hard ceiling on distinct identifiers tracked |
+| `FREELLM_VIRTUAL_KEYS_PATH` | unset | Path to a JSON file declaring virtual sub-keys |
+
+### Migration
+
+Fully backwards compatible. Every new capability is opt-in via a
+request header (`X-FreeLLM-Strict`, `X-FreeLLM-Privacy`,
+`X-FreeLLM-Identifier`) or an environment variable. Existing clients
+see richer response headers and enriched 429 bodies automatically,
+but no behavioral change unless they opt into strict mode.
+
+Error response shapes are slightly different: the `type` field now
+uses OpenAI's taxonomy (`invalid_request_error`,
+`authentication_error`, etc.) and every response carries a `code`
+field plus a `request_id`. Clients that were pattern-matching on
+message strings should move to code-based dispatch.
+
+[1.4.0]: https://github.com/Devansh-365/freellm/releases/tag/v1.4.0
+
+---
+
 ## [1.3.0] - 2026-04-08
 
 Response caching — same prompt twice returns the cached response in ~23ms

@@ -3,11 +3,12 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.3.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.4.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-141%20passing-success?style=flat-square)
 
 ### You shouldn't need a credit card to call an LLM.
 
@@ -19,7 +20,7 @@ Stack 3 keys per provider and you get **~360 free requests per minute**. Includi
 
 Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
 
-**[Website](https://freellms.vercel.app)** · **[Docs](https://freellms.vercel.app/introduction/)** · [Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [API](#api-reference) · [Dashboard](#dashboard)
+**[Website](https://freellms.vercel.app)** · **[Docs](https://freellms.vercel.app/introduction/)** · [Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [Multi-tenant](#multi-tenant-virtual-sub-keys-and-per-user-limits) · [API](#api-reference) · [Dashboard](#dashboard)
 
 **If you've ever burned $20 testing prompts, [star the repo](https://github.com/Devansh-365/freellm). It helps other builders find it.**
 
@@ -58,6 +59,11 @@ The request goes to the fastest available provider. If that one is rate-limited 
 - **Token tracking.** Rolling 24h budget per provider, surfaced in the dashboard.
 - **Circuit breakers.** Failing providers get sidelined and tested for recovery.
 - **Real-time dashboard.** Provider health, request log, latency, cache hit rate.
+- **Transparent routing.** Every response tells you which provider answered, and why.
+- **Strict mode.** Opt in and refuse silent provider substitution.
+- **Privacy routing.** Skip providers that train on free-tier prompts.
+- **Virtual sub-keys.** Issue scoped keys with per-key request and token caps.
+- **Per-user rate limits.** Safely expose the gateway to your app's end users.
 - **Zero cost.** Every provider runs on its free tier.
 
 ## Supported providers
@@ -171,14 +177,110 @@ CACHE_MAX_ENTRIES=1000
 
 Streaming and error responses are never cached. Cached responses are marked with `x_freellm_cached: true`.
 
+### Transparent routing and strict mode
+
+Every response carries headers that tell you exactly how FreeLLM handled the request:
+
+```
+X-FreeLLM-Provider: groq
+X-FreeLLM-Model: groq/llama-3.3-70b-versatile
+X-FreeLLM-Requested-Model: free-fast
+X-FreeLLM-Cached: false
+X-FreeLLM-Route-Reason: meta
+X-Request-Id: 4d6c9e1a-...
+```
+
+`Route-Reason` is one of `direct`, `meta`, `cache`, or `failover`. Every response, successful or not, carries a unique `X-Request-Id` that also appears in the server logs and the error body, so a single grep correlates everything.
+
+If you want to refuse silent substitution, opt into strict mode:
+
+```
+X-FreeLLM-Strict: true
+```
+
+In strict mode meta-models are rejected (400), and concrete models are tried against exactly one provider. If that provider fails, the upstream error surfaces verbatim instead of failing over to a different one.
+
+### Actionable 429s
+
+When all providers are exhausted, the response body now tells you how to recover:
+
+```json
+{
+  "error": {
+    "type": "rate_limit_error",
+    "code": "all_providers_exhausted",
+    "retry_after_ms": 12000,
+    "providers": [
+      { "id": "groq",   "retry_after_ms": 12000, "keys_available": 0, "circuit_state": "closed" },
+      { "id": "gemini", "retry_after_ms": 5000,  "keys_available": 0, "circuit_state": "closed" }
+    ],
+    "suggestions": [{ "model": "free-fast", "available_in_ms": 5000 }]
+  }
+}
+```
+
+The response also carries an HTTP `Retry-After` header in seconds so any standard client retries at the right time.
+
+### Privacy and training-policy routing
+
+Not every free tier treats your prompts the same way. Send `X-FreeLLM-Privacy: no-training` and the router will only consider providers that contractually exclude free-tier data from training:
+
+| Provider   | Policy             |
+|------------|--------------------|
+| Groq       | no-training        |
+| Cerebras   | no-training        |
+| NVIDIA NIM | no-training        |
+| Ollama     | local              |
+| Mistral    | configurable       |
+| Gemini     | free-tier trains   |
+
+If no configured provider can satisfy the posture for the model you asked for, you get a clean 400 `model_not_supported` up front. Catalog entries carry source URLs and `last_verified` dates; the server warns at boot for any entry older than 90 days.
+
+### Multi-tenant: virtual sub-keys and per-user limits
+
+Building a side project and want to safely expose the gateway to your visitors without giving everyone your master key? FreeLLM ships two independent mechanisms that compose:
+
+**Virtual sub-keys.** Declare them in a JSON file:
+
+```json
+{
+  "keys": [
+    {
+      "id": "sk-freellm-portfolio-abc123",
+      "label": "My portfolio site",
+      "dailyRequestCap": 500,
+      "dailyTokenCap": 200000,
+      "allowedModels": ["free-fast", "free"],
+      "expiresAt": "2026-07-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+Point `FREELLM_VIRTUAL_KEYS_PATH` at the file, restart, and authenticate with `Authorization: Bearer sk-freellm-portfolio-abc123`. The gateway enforces the allowlist and caps before touching any upstream provider, and records usage only after a successful response so failed routes never burn quota. Caps are in-memory rolling 24h windows (soft cap, not a billing system; documented and logged at boot).
+
+**Per-identifier rate limits.** Tag each request with `X-FreeLLM-Identifier: user-42` (anything matching `^[A-Za-z0-9_.:-]{1,128}$`) and each identifier gets its own sliding-window bucket, independent from the per-IP and per-provider limiters. One noisy user hitting their cap does not affect anyone else. Configure via `FREELLM_IDENTIFIER_LIMIT=<max>/<windowMs>` (default `60/60000`). Responses carry `X-FreeLLM-Identifier-Remaining` and `-Reset` so clients can self-throttle.
+
+Missing identifier falls back to the client IP. Literal `"undefined"` and `"null"` strings are treated as missing. Tainted values are rejected with a clear 400 instead of landing in logs.
+
 ### Securing your gateway
 
-Both optional. Leave empty for local dev.
+All optional. Leave empty for local dev.
 
 | Variable | What it does |
 |----------|--------------|
-| `FREELLM_API_KEY` | Requires `Authorization: Bearer <key>` on every request |
-| `ALLOWED_ORIGINS` | Comma-separated CORS allowlist |
+| `FREELLM_API_KEY` | Master key. Requires `Authorization: Bearer <key>` on every request. |
+| `FREELLM_ADMIN_KEY` | Separate key for admin endpoints (circuit breaker reset, routing switch). |
+| `FREELLM_VIRTUAL_KEYS_PATH` | Path to a JSON file declaring virtual sub-keys with per-key caps. |
+| `FREELLM_IDENTIFIER_LIMIT` | Per-identifier rate limit, format `<max>/<windowMs>` (default `60/60000`). |
+| `FREELLM_IDENTIFIER_MAX_BUCKETS` | Hard ceiling on distinct identifiers tracked (default `10000`). |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allowlist. |
+
+Dependency posture and trust details live on the dedicated website pages:
+
+- **[Security and dependencies](https://freellms.vercel.app/security/)** — direct dep list, what is deliberately not in the codebase, image verification
+- **[Privacy and training](https://freellms.vercel.app/privacy/)** — the full provider catalog with source links
+- **[Benchmarks](https://freellms.vercel.app/benchmarks/)** — cold start and overhead numbers with methodology
 
 ## API reference
 
@@ -192,7 +294,17 @@ Fully OpenAI-compatible. Available at `/v1/...`.
 | `POST` | `/v1/status/providers/{id}/reset` | Force-reset a provider's circuit breaker |
 | `PATCH` | `/v1/status/routing` | Switch between `round_robin` and `random` |
 
-Every response includes an `x_freellm_provider` header so you know which provider handled it.
+Every response includes observability headers so you know exactly how the request was handled:
+
+- `X-FreeLLM-Provider`, `X-FreeLLM-Model`, `X-FreeLLM-Requested-Model`, `X-FreeLLM-Cached`, `X-FreeLLM-Route-Reason`
+- `X-FreeLLM-Identifier`, `-Remaining`, `-Reset` when identifier rate limiting is in play
+- `X-Request-Id` on every response, matching the id in logs and error bodies
+
+Request-side headers you can opt into:
+
+- `X-FreeLLM-Strict: true` refuses silent provider substitution
+- `X-FreeLLM-Privacy: no-training` filters out providers that train on free-tier data
+- `X-FreeLLM-Identifier: <id>` tags the request with a per-user bucket
 
 ## Dashboard
 
