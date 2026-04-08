@@ -65,6 +65,14 @@ export default defineConfig({
           ],
         },
         {
+          label: "Trust",
+          items: [
+            { label: "Security and dependencies", slug: "security" },
+            { label: "Privacy and training", slug: "privacy" },
+            { label: "Benchmarks", slug: "benchmarks" },
+          ],
+        },
+        {
           label: "Compare",
           items: [{ label: "vs Other Gateways", slug: "comparison" }],
         },

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "measured_at": "2026-04-08T21:03:44.329Z",
+  "node_version": "v20.19.0",
+  "platform": "darwin arm64",
+  "methodology": {
+    "warmup_requests": 20,
+    "measured_requests": 200,
+    "upstream": "fake in-process HTTP server returning a canned 200 body",
+    "notes": "Boot time is wall-clock from spawn to first healthz 200. Cache-miss measures the full routing path with unique prompts per request. Cache-hit measures the same prompt repeated so the exact-match cache returns immediately. Run on the developer's machine, not a synthetic cloud host, so treat as ballpark and reproduce locally with scripts/bench.mjs."
+  },
+  "cold_start": {
+    "boot_ms": 127
+  },
+  "overhead_ms": {
+    "cache_miss": {
+      "mean": 0.72,
+      "p50": 0.69,
+      "p90": 0.84,
+      "p99": 1.37,
+      "min": 0.44,
+      "max": 1.61
+    },
+    "cache_hit": {
+      "mean": 0.37,
+      "p50": 0.34,
+      "p90": 0.4,
+      "p99": 0.92,
+      "min": 0.29,
+      "max": 1.14
+    }
+  }
+}

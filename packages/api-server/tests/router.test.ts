@@ -19,6 +19,8 @@ interface FakeOptions {
   statuses?: number[];
   /** Body returned for 200 responses. */
   body?: unknown;
+  /** Extra response headers to include on each upstream response. */
+  extraHeaders?: Record<string, string>;
 }
 
 class FakeProvider implements ProviderAdapter {
@@ -26,8 +28,10 @@ class FakeProvider implements ProviderAdapter {
   readonly name: string;
   readonly models: ModelObject[];
   callCount = 0;
+  lastRetryAfterSeconds: number | undefined = undefined;
   private statuses: number[];
   private body: unknown;
+  private extraHeaders: Record<string, string>;
   private cbState: CircuitBreakerState = "closed";
   private rateLimited = false;
   private statsObj: ProviderStats = {
@@ -48,6 +52,7 @@ class FakeProvider implements ProviderAdapter {
       provider: opts.id,
     }));
     this.statuses = opts.statuses ?? [200];
+    this.extraHeaders = opts.extraHeaders ?? {};
     this.body = opts.body ?? {
       id: "chatcmpl-test",
       object: "chat.completion",
@@ -82,19 +87,20 @@ class FakeProvider implements ProviderAdapter {
     if (status === 200) {
       return new Response(JSON.stringify(this.body), {
         status: 200,
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...this.extraHeaders },
       });
     }
     return new Response(JSON.stringify({ error: { message: "upstream error" } }), {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...this.extraHeaders },
     });
   }
 
   onSuccess(): void { this.statsObj.successRequests++; }
-  onRateLimit(): void {
+  onRateLimit(_response: Response, retryAfterSeconds?: number): void {
     this.statsObj.rateLimitedRequests++;
     this.rateLimited = true;
+    this.lastRetryAfterSeconds = retryAfterSeconds;
   }
   onError(): void {
     this.statsObj.failedRequests++;
@@ -187,6 +193,84 @@ describe("GatewayRouter.complete (non-strict)", () => {
     await expect(router.complete(baseRequest("m"))).rejects.toBeInstanceOf(
       AllProvidersExhaustedError,
     );
+  });
+
+  it("forwards an upstream Retry-After value to the provider cooldown", async () => {
+    const slow = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      statuses: [429, 200],
+      extraHeaders: { "retry-after": "7" },
+    });
+    const backup = new FakeProvider({ id: "gemini", models: ["m"] });
+    router = new GatewayRouter(fakeRegistry([slow, backup]));
+
+    await router.complete(baseRequest("m"));
+    expect(slow.lastRetryAfterSeconds).toBe(7);
+  });
+
+  it("clamps absurd upstream Retry-After values down to the 10 minute ceiling", async () => {
+    const absurd = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      statuses: [429, 200],
+      extraHeaders: { "retry-after": "99999999" },
+    });
+    const backup = new FakeProvider({ id: "gemini", models: ["m"] });
+    router = new GatewayRouter(fakeRegistry([absurd, backup]));
+
+    await router.complete(baseRequest("m"));
+    // 10 minute ceiling = 600s.
+    expect(absurd.lastRetryAfterSeconds).toBe(600);
+  });
+
+  it("honors Retry-After on 5xx responses too", async () => {
+    const dying = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      statuses: [503, 200],
+      extraHeaders: { "retry-after": "12" },
+    });
+    const backup = new FakeProvider({ id: "gemini", models: ["m"] });
+    router = new GatewayRouter(fakeRegistry([dying, backup]));
+
+    await router.complete(baseRequest("m"));
+    expect(dying.lastRetryAfterSeconds).toBe(12);
+  });
+});
+
+describe("GatewayRouter.complete (privacy=no-training)", () => {
+  it("routes to a no-training provider and skips training ones", async () => {
+    // gemini is tagged free-tier-trains in PROVIDER_PRIVACY; groq is no-training.
+    const gemini = new FakeProvider({ id: "gemini", models: ["m"] });
+    const groq = new FakeProvider({ id: "groq", models: ["m"] });
+    const router = new GatewayRouter(fakeRegistry([gemini, groq]));
+
+    const { meta } = await router.complete(baseRequest("m"), { privacy: "no-training" });
+    expect(meta.provider).toBe("groq");
+    // Gemini was never tried at all.
+    expect(gemini.callCount).toBe(0);
+    expect(groq.callCount).toBe(1);
+  });
+
+  it("rejects up front with model_not_supported when no eligible provider exists", async () => {
+    // Only gemini is configured and it trains on free-tier requests.
+    const gemini = new FakeProvider({ id: "gemini", models: ["m"] });
+    const router = new GatewayRouter(fakeRegistry([gemini]));
+
+    await expect(
+      router.complete(baseRequest("m"), { privacy: "no-training" }),
+    ).rejects.toMatchObject({ code: "model_not_supported" });
+    // No provider was called.
+    expect(gemini.callCount).toBe(0);
+  });
+
+  it("still works when privacy=any explicitly", async () => {
+    const gemini = new FakeProvider({ id: "gemini", models: ["m"] });
+    const router = new GatewayRouter(fakeRegistry([gemini]));
+
+    const { meta } = await router.complete(baseRequest("m"), { privacy: "any" });
+    expect(meta.provider).toBe("gemini");
   });
 });
 

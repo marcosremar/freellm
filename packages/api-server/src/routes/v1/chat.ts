@@ -7,6 +7,7 @@ import type { RouteMeta } from "../../gateway/router.js";
 import { validate } from "../../middleware/validate.js";
 import { chatCompletionRequestSchema } from "../../gateway/schemas.js";
 import { parseStrictHeader } from "../../gateway/strict.js";
+import { parsePrivacyHeader } from "../../gateway/privacy.js";
 
 const chatRouter: IRouter = Router();
 
@@ -22,11 +23,12 @@ function setRouteHeaders(res: Response, meta: RouteMeta): void {
 chatRouter.post("/completions", validate(chatCompletionRequestSchema), async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body as ChatCompletionRequest;
   const strict = parseStrictHeader(req.header("x-freellm-strict"));
+  const privacy = parsePrivacyHeader(req.header("x-freellm-privacy"));
 
   if (body.stream) {
-    await handleStreamingRequest(req, res, body, strict, next);
+    await handleStreamingRequest(req, res, body, strict, privacy, next);
   } else {
-    await handleNonStreamingRequest(req, res, body, strict, next);
+    await handleNonStreamingRequest(req, res, body, strict, privacy, next);
   }
 });
 
@@ -35,10 +37,11 @@ async function handleNonStreamingRequest(
   res: Response,
   body: ChatCompletionRequest,
   strict: boolean,
+  privacy: "any" | "no-training",
   next: NextFunction,
 ) {
   try {
-    const { data, meta } = await gatewayRouter.complete(body, { strict });
+    const { data, meta } = await gatewayRouter.complete(body, { strict, privacy });
     setRouteHeaders(res, meta);
     res.json(data);
   } catch (err) {
@@ -51,13 +54,14 @@ async function handleStreamingRequest(
   res: Response,
   body: ChatCompletionRequest,
   strict: boolean,
+  privacy: "any" | "no-training",
   next: NextFunction,
 ) {
   const startTime = Date.now();
 
   try {
     const { response, provider, resolvedModel, latencyMs, attempted, failoverCount } =
-      await gatewayRouter.routeStream(body, { strict });
+      await gatewayRouter.routeStream(body, { strict, privacy });
 
     const meta: RouteMeta = {
       provider: provider.id,

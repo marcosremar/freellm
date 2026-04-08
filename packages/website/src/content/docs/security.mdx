@@ -1,0 +1,74 @@
+---
+title: Security and dependencies
+description: How FreeLLM is built to minimize supply-chain risk, what dependencies it pulls in, and how to verify a running deployment.
+---
+
+FreeLLM is a gateway that sits between your app and several upstream LLM providers. That means it handles API keys and prompts, which makes the supply chain non-negotiable. This page is the honest accounting of what the codebase depends on, how we pin versions, and how you can verify a deployment you did not build yourself.
+
+## The short version
+
+- The API server has **six direct production dependencies**. Every one of them is a well-known TypeScript or Node package with a long public history.
+- There is **no runtime code generation**, **no plugin loader**, **no dynamic `require`**, and **no install-time `postinstall` script** in our own package.
+- The Docker image runs as a **non-root user** and ships with a **healthcheck**.
+- Every tagged release is built from the commit on `main` by GitHub Actions, not from a local machine.
+- We **do not require** `FREELLM_API_KEY` to start the gateway, but we **log a warning at boot** when `NODE_ENV=production` and no key is set.
+
+## Direct production dependencies
+
+These are the packages imported at runtime by the API server. Anything not on this list is a transitive dependency of one of these, or a dev-only dependency that never ships in the Docker image.
+
+| Package | Purpose | License |
+|---|---|---|
+| `express` | HTTP framework | MIT |
+| `cors` | CORS middleware | MIT |
+| `express-rate-limit` | Per-IP request rate limiting | MIT |
+| `pino` | Structured logger | MIT |
+| `pino-http` | Per-request logging middleware | MIT |
+| `zod` | Runtime schema validation | MIT |
+
+That is it. Every other file in the built image is either Node itself, a transitive dependency, or our own code.
+
+## What is deliberately not here
+
+You will not find any of the following in FreeLLM:
+
+- **No telemetry libraries.** The gateway does not phone home anywhere.
+- **No automatic dependency loaders.** Everything the server needs is imported at build time by esbuild.
+- **No install-time scripts in our package.** Our own `package.json` has no `postinstall`, `preinstall`, or `prepare` script.
+- **No hidden authentication fallbacks.** `FREELLM_API_KEY` is the only gate, and it uses timing-safe comparison.
+- **No database.** The cache, rate limiter, usage tracker, and request log are all in process memory. A restart resets every counter.
+
+## How we keep dependencies from drifting
+
+- The root workspace uses a **`pnpm-lock.yaml`** committed to git.
+- Every release is built in CI from that lockfile using `pnpm install --frozen-lockfile`.
+- CI runs `pnpm audit --prod --audit-level=moderate` on every pull request and blocks merges on unknown advisories.
+- Known-accepted advisories are tracked in `.github/audit-allowlist.json` with an expiry date.
+- We do not use Dependabot auto-merge. Every bump is reviewed by a human.
+
+## Verifying a deployment
+
+If you did not build the running gateway yourself and want to confirm what is inside it:
+
+```bash
+# Pull the exact image the GitHub Release pointed at
+docker pull ghcr.io/devansh-365/freellm:latest
+
+# Inspect the layers and see exactly which files were added
+docker image inspect ghcr.io/devansh-365/freellm:latest
+
+# Run it and hit the healthcheck
+docker run --rm -p 3000:3000 ghcr.io/devansh-365/freellm:latest &
+curl -s http://localhost:3000/healthz
+# {"status":"ok"}
+```
+
+Every HTTP response from a deployed gateway also carries an `X-Request-Id` header that threads through the access logs and any error bodies. If you file a bug report, copy that id.
+
+## Reporting a vulnerability
+
+Do not open a public GitHub issue for a security problem. Email or open a [private advisory on GitHub](https://github.com/Devansh-365/freellm/security/advisories/new). We will acknowledge within 48 hours and aim to ship a fix or mitigation within 7 days for anything that lets an attacker read keys, bypass authentication, or escape the sandbox.
+
+## Why this page exists
+
+In March 2026, a popular LLM gateway shipped compromised versions to npm that exfiltrated every API key they could reach. Anyone who installed those versions spent the next week rotating credentials and auditing Kubernetes pods. We think you deserve to know exactly what you are running before a bad day makes it urgent.

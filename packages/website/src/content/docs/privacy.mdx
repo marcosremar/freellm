@@ -1,0 +1,52 @@
+---
+title: Privacy and training policies
+description: What each upstream provider does with your prompts, and how to route around the ones that train on free-tier data.
+---
+
+LLM providers do not all handle free-tier data the same way. Some contractually exclude your prompts from training. Some use your free prompts to improve their paid products. Some let you opt out only through a workspace setting you may not have access to.
+
+FreeLLM tracks this per provider and lets you refuse the ones that train. Pass the header `X-FreeLLM-Privacy: no-training` on any request and the router will only consider providers whose declared policy satisfies that posture.
+
+```bash
+curl https://your-gateway/v1/chat/completions \
+  -H "Authorization: Bearer $FREELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-FreeLLM-Privacy: no-training" \
+  -d '{
+    "model": "free-smart",
+    "messages": [{"role": "user", "content": "something sensitive"}]
+  }'
+```
+
+If no configured provider can satisfy the posture for the model you asked for, the gateway returns a 400 with `code: "model_not_supported"` and names the restriction in the message. You can then either relax the posture or switch to a model served by a compliant provider.
+
+## The catalog
+
+This table is FreeLLM's current understanding of each provider's free-tier data handling. Every entry links to the provider's own terms of service or privacy page. The `last verified` column is when a human read the source and confirmed it still matches the claim.
+
+| Provider | Policy | Last verified | Source |
+|---|---|---|---|
+| Groq | no-training | 2026-04-09 | [groq.com/terms-of-use](https://groq.com/terms-of-use/) |
+| Cerebras | no-training | 2026-04-09 | [cerebras.net/privacy-policy](https://www.cerebras.net/privacy-policy/) |
+| NVIDIA NIM | no-training | 2026-04-09 | [nvidia.com service-specific terms](https://www.nvidia.com/en-us/agreements/cloud-services/service-specific-terms-for-nvidia-nim/) |
+| Ollama | local | 2026-04-09 | [github.com/ollama/ollama](https://github.com/ollama/ollama) |
+| Mistral | configurable | 2026-04-09 | [mistral.ai/terms](https://mistral.ai/terms/) |
+| Gemini | free-tier trains | 2026-04-09 | [ai.google.dev/gemini-api/terms](https://ai.google.dev/gemini-api/terms) |
+
+## What the policy labels mean
+
+**no-training** means the provider's terms explicitly exclude prompts and completions from being used to train or improve their models on the free tier. A request with `X-FreeLLM-Privacy: no-training` will consider these providers.
+
+**local** means the provider runs on your own machine and no data leaves the host. Ollama is the only one that fits this. A `no-training` request will also consider local providers.
+
+**configurable** means the provider's terms allow them to train by default, but there is a workspace or account setting that turns it off. FreeLLM does not know which of your accounts are opted in, so it **blocks** these providers for a `no-training` request. If you know your account is opted out, lift the posture per-request.
+
+**free-tier trains** means the provider's terms allow them to use free-tier data for model improvement. FreeLLM blocks these providers on a `no-training` request. The paid tier for these providers usually has a different policy, but FreeLLM is built around free tiers, so the free policy is what we track.
+
+## Staleness
+
+Provider terms change. The gateway logs a warning at boot for any catalog entry older than 90 days so an operator can re-verify. The file that drives this is `packages/api-server/src/gateway/privacy.ts` in the source tree. If a policy change is material enough to matter, open an issue and we will update both the source and this page in the same release.
+
+## What FreeLLM itself does with your data
+
+The gateway stores the last 500 requests in a purely in-memory ring buffer so the dashboard has something to show. Nothing is written to disk. Nothing is sent anywhere other than the upstream provider you just picked. Restart the process and every counter resets.

@@ -1,0 +1,4 @@
+{
+  "description": "Known-accepted pnpm audit findings. Every entry must have a human-reviewed justification and an expiry date. On expiry the entry is removed and the underlying advisory must either be fixed or re-reviewed. CI does not currently read this file, it is a process contract for humans.",
+  "accepted": []
+}

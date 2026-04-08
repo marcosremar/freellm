@@ -6,6 +6,9 @@ import { UsageTracker } from "./usage-tracker.js";
 import { ResponseCache } from "./cache.js";
 import { META_MODELS, DEFAULT_MODELS, NON_RETRIABLE_STATUSES } from "./config.js";
 import { assertStrictModeAllowed } from "./strict.js";
+import { parseRetryAfter } from "./retry-after.js";
+import { providerSatisfiesPrivacy, type PrivacyRequest } from "./privacy.js";
+import { freellmError } from "../errors/index.js";
 
 export type RouteReason = "direct" | "meta" | "cache" | "failover";
 
@@ -20,6 +23,7 @@ export interface RouteMeta {
 
 export interface RouteOptions {
   strict?: boolean;
+  privacy?: PrivacyRequest;
 }
 
 const ROUTE_TIMEOUT_MS = parseInt(process.env["ROUTE_TIMEOUT_MS"] ?? "30000", 10);
@@ -44,11 +48,23 @@ export class GatewayRouter {
   private pickProvider(
     modelId: string,
     excluded: Set<string>,
+    privacy: PrivacyRequest = "any",
   ): ProviderAdapter | undefined {
+    // Merge privacy exclusions into the caller-supplied exclude set so the
+    // registry never sees providers the privacy posture forbids.
+    const effectiveExcluded = new Set(excluded);
+    if (privacy !== "any") {
+      for (const p of this.registry.getAll()) {
+        if (!providerSatisfiesPrivacy(p.id, privacy)) {
+          effectiveExcluded.add(p.id);
+        }
+      }
+    }
+
     if (META_MODELS.has(modelId)) {
       return this.registry.getProviderForMetaModel(
         modelId,
-        excluded,
+        effectiveExcluded,
         this.strategy,
         this.getMetaRrIndex(modelId),
         (next) => this.setMetaRrIndex(modelId, next),
@@ -57,7 +73,9 @@ export class GatewayRouter {
 
     const available = this.registry
       .getAvailable()
-      .filter((p) => !excluded.has(p.id) && p.models.some((m) => m.id === modelId));
+      .filter(
+        (p) => !effectiveExcluded.has(p.id) && p.models.some((m) => m.id === modelId),
+      );
 
     if (available.length === 0) return undefined;
 
@@ -106,7 +124,27 @@ export class GatewayRouter {
     failoverCount: number;
   }> {
     const strict = options.strict === true;
+    const privacy: PrivacyRequest = options.privacy ?? "any";
     assertStrictModeAllowed(request.model, strict);
+
+    // Fail fast when a privacy posture rules out every configured provider
+    // for this model. The caller gets a distinct, actionable error instead
+    // of a generic "all providers exhausted" after a pointless loop.
+    if (privacy !== "any") {
+      const anyEligible = this.registry.getAll().some((p) => {
+        if (!p.isEnabled()) return false;
+        if (!providerSatisfiesPrivacy(p.id, privacy)) return false;
+        if (META_MODELS.has(request.model)) return true;
+        return p.models.some((m) => m.id === request.model);
+      });
+      if (!anyEligible) {
+        throw freellmError({
+          code: "model_not_supported",
+          message: `No provider matching privacy policy "${privacy}" is configured for model "${request.model}".`,
+          requested_model: request.model,
+        });
+      }
+    }
 
     const excluded = new Set<string>();
     const attempted: string[] = [];
@@ -121,7 +159,7 @@ export class GatewayRouter {
         );
       }
 
-      const provider = this.pickProvider(request.model, excluded);
+      const provider = this.pickProvider(request.model, excluded, privacy);
 
       if (!provider) {
         throw new AllProvidersExhaustedError(
@@ -139,8 +177,13 @@ export class GatewayRouter {
         const response = await provider.complete(mappedRequest);
 
         if (response.status === 429) {
-          const retryAfter = response.headers.get("retry-after");
-          provider.onRateLimit(response, retryAfter ? parseInt(retryAfter, 10) : undefined);
+          const retryAfterMs = parseRetryAfter(response.headers.get("retry-after"));
+          // onRateLimit takes seconds (the provider API contract). Pass the
+          // clamped value so absurd upstream hints can't lock a key out.
+          provider.onRateLimit(
+            response,
+            retryAfterMs != null ? Math.ceil(retryAfterMs / 1000) : undefined,
+          );
           // Only exclude the provider if ALL its keys are now rate-limited.
           // Otherwise the next iteration can pick a different key from the same provider.
           if (!provider.isAvailable()) {
@@ -159,6 +202,12 @@ export class GatewayRouter {
         }
 
         if (response.status >= 500) {
+          // Some providers send Retry-After on 5xx too. Treat it as a cooldown
+          // hint for the key so we don't immediately retry into the same hole.
+          const retryAfterMs = parseRetryAfter(response.headers.get("retry-after"));
+          if (retryAfterMs != null) {
+            provider.onRateLimit(response, Math.ceil(retryAfterMs / 1000));
+          }
           provider.onError();
           excluded.add(provider.id);
           if (strict) {

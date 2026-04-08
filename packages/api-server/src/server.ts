@@ -1,10 +1,23 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
+import { PROVIDER_PRIVACY, daysSinceVerified } from "./gateway/privacy.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 
 if (process.env["NODE_ENV"] === "production" && !process.env["FREELLM_API_KEY"]) {
   logger.warn("FREELLM_API_KEY is not set -- gateway is open to the internet without authentication");
+}
+
+// Stale privacy catalog warning. Entries older than 90 days should be
+// re-verified by a human against the provider's current terms of service.
+for (const [id, entry] of Object.entries(PROVIDER_PRIVACY)) {
+  const age = daysSinceVerified(entry);
+  if (age > 90) {
+    logger.warn(
+      { provider: id, last_verified: entry.last_verified, days_stale: age },
+      "privacy catalog entry is older than 90 days -- re-verify against provider ToS",
+    );
+  }
 }
 
 const server = app.listen(PORT, "0.0.0.0", () => {
