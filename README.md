@@ -50,15 +50,15 @@ The request goes to the fastest available provider. If that one is rate-limited 
 
 ## What you get
 
-→ **Drop-in OpenAI SDK.** Swap your base URL. Keep your code.
-→ **Automatic failover.** Groq rate-limited? Routes to Gemini, then Mistral, then Cerebras.
-→ **Three meta-models.** `free-fast` for speed, `free-smart` for reasoning, `free` for max availability.
-→ **Multi-key rotation.** Stack keys per provider for 3-4× the free RPM.
-→ **Response caching.** Identical prompts return in ~23ms with zero quota burn.
-→ **Token tracking.** Rolling 24h budget per provider, surfaced in the dashboard.
-→ **Circuit breakers.** Failing providers get sidelined and tested for recovery.
-→ **Real-time dashboard.** Provider health, request log, latency, cache hit rate.
-→ **Zero cost.** Every provider runs on its free tier.
+- **Drop-in OpenAI SDK.** Swap your base URL. Keep your code.
+- **Automatic failover.** Groq rate-limited? Routes to Gemini, then Mistral, then Cerebras.
+- **Three meta-models.** `free-fast` for speed, `free-smart` for reasoning, `free` for max availability.
+- **Multi-key rotation.** Stack keys per provider for 3-4× the free RPM.
+- **Response caching.** Identical prompts return in ~23ms with zero quota burn.
+- **Token tracking.** Rolling 24h budget per provider, surfaced in the dashboard.
+- **Circuit breakers.** Failing providers get sidelined and tested for recovery.
+- **Real-time dashboard.** Provider health, request log, latency, cache hit rate.
+- **Zero cost.** Every provider runs on its free tier.
 
 ## Supported providers
 
