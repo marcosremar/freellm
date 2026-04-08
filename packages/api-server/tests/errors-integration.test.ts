@@ -17,6 +17,8 @@ beforeAll(async () => {
   // A fixed API key lets us exercise 401 paths.
   process.env["FREELLM_API_KEY"] = "test-key-for-errors-integration";
   process.env["DISABLE_CLIENT_RATELIMIT"] = "true";
+  process.env["RATE_LIMIT_RPM"] = "100000";
+  process.env["FREELLM_IDENTIFIER_LIMIT"] = "1000/60000";
   delete process.env["OLLAMA_BASE_URL"];
   delete process.env["OLLAMA_MODELS"];
   for (const k of [

@@ -8,6 +8,9 @@ import { validate } from "../../middleware/validate.js";
 import { chatCompletionRequestSchema } from "../../gateway/schemas.js";
 import { parseStrictHeader } from "../../gateway/strict.js";
 import { parsePrivacyHeader } from "../../gateway/privacy.js";
+import { getVirtualKeyStore } from "../../gateway/virtual-keys-singleton.js";
+import { VirtualKeyCheckError, type VirtualKey } from "../../gateway/virtual-keys.js";
+import { freellmError } from "../../errors/index.js";
 
 const chatRouter: IRouter = Router();
 
@@ -20,15 +23,68 @@ function setRouteHeaders(res: Response, meta: RouteMeta): void {
   res.setHeader("X-FreeLLM-Route-Reason", meta.reason);
 }
 
+/**
+ * Translate a VirtualKeyCheckError into the public FreeLLMError taxonomy.
+ * Called once from the common virtual-key guard below.
+ */
+function virtualKeyCheckToFreeLLMError(err: VirtualKeyCheckError) {
+  switch (err.reason) {
+    case "expired":
+      return freellmError({
+        code: "invalid_api_key",
+        message: err.message,
+      });
+    case "model_not_allowed":
+      return freellmError({
+        code: "model_not_supported",
+        message: err.message,
+      });
+    case "request_cap_reached":
+    case "token_cap_reached":
+      return freellmError({
+        code: "virtual_key_cap_reached",
+        message: err.message,
+      });
+  }
+}
+
+/**
+ * Enforce virtual-key constraints before routing. Throws a FreeLLMError
+ * (via the SDK) when the key is expired, does not allow the model, or has
+ * exhausted its rolling-window cap. Returns the key on success so the
+ * caller can record usage after the upstream responds.
+ */
+function guardVirtualKey(req: Request, model: string): VirtualKey | undefined {
+  const key = req.virtualKey;
+  if (!key) return undefined;
+  try {
+    getVirtualKeyStore().assertCanServe(key, model);
+  } catch (err) {
+    if (err instanceof VirtualKeyCheckError) {
+      throw virtualKeyCheckToFreeLLMError(err);
+    }
+    throw err;
+  }
+  return key;
+}
+
 chatRouter.post("/completions", validate(chatCompletionRequestSchema), async (req: Request, res: Response, next: NextFunction) => {
   const body = req.body as ChatCompletionRequest;
   const strict = parseStrictHeader(req.header("x-freellm-strict"));
   const privacy = parsePrivacyHeader(req.header("x-freellm-privacy"));
 
+  // Virtual key guard runs before routing. Errors here never touch upstream.
+  let virtualKey: VirtualKey | undefined;
+  try {
+    virtualKey = guardVirtualKey(req, body.model);
+  } catch (err) {
+    return next(err);
+  }
+
   if (body.stream) {
-    await handleStreamingRequest(req, res, body, strict, privacy, next);
+    await handleStreamingRequest(req, res, body, strict, privacy, virtualKey, next);
   } else {
-    await handleNonStreamingRequest(req, res, body, strict, privacy, next);
+    await handleNonStreamingRequest(req, res, body, strict, privacy, virtualKey, next);
   }
 });
 
@@ -38,11 +94,21 @@ async function handleNonStreamingRequest(
   body: ChatCompletionRequest,
   strict: boolean,
   privacy: "any" | "no-training",
+  virtualKey: VirtualKey | undefined,
   next: NextFunction,
 ) {
   try {
     const { data, meta } = await gatewayRouter.complete(body, { strict, privacy });
     setRouteHeaders(res, meta);
+
+    // Record usage against the virtual key AFTER a successful upstream
+    // response so failed routes never eat quota.
+    if (virtualKey) {
+      const tokens =
+        (data.usage?.prompt_tokens ?? 0) + (data.usage?.completion_tokens ?? 0);
+      getVirtualKeyStore().recordRequest(virtualKey, tokens);
+    }
+
     res.json(data);
   } catch (err) {
     next(err);
@@ -55,6 +121,7 @@ async function handleStreamingRequest(
   body: ChatCompletionRequest,
   strict: boolean,
   privacy: "any" | "no-training",
+  virtualKey: VirtualKey | undefined,
   next: NextFunction,
 ) {
   const startTime = Date.now();
@@ -87,6 +154,13 @@ async function handleStreamingRequest(
         status: "success",
         streaming: true,
       });
+      // Streaming responses don't expose token counts until the provider
+      // sends a usage chunk (which some don't emit at all). Record the
+      // request itself against the virtual key cap but pass tokens=0; the
+      // rolling-window request cap is the protective control here.
+      if (virtualKey) {
+        getVirtualKeyStore().recordRequest(virtualKey, 0);
+      }
       res.write("data: [DONE]\n\n");
       res.end();
       return;
@@ -104,7 +178,7 @@ async function handleStreamingRequest(
         }
       }
 
-      // Log success once — provider.onSuccess() was already called in route()
+      // Log success once, provider.onSuccess was already called in route()
       gatewayRouter.requestLog.add({
         requestedModel: body.model,
         resolvedModel,
@@ -113,6 +187,9 @@ async function handleStreamingRequest(
         status: "success",
         streaming: true,
       });
+      if (virtualKey) {
+        getVirtualKeyStore().recordRequest(virtualKey, 0);
+      }
     } catch (streamErr) {
       // Stream read failed after headers were sent
       const elapsed = Date.now() - startTime;

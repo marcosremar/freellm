@@ -1,11 +1,31 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { PROVIDER_PRIVACY, daysSinceVerified } from "./gateway/privacy.js";
+import { initVirtualKeys } from "./gateway/virtual-keys-singleton.js";
+import { VirtualKeysError } from "./gateway/virtual-keys.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 
 if (process.env["NODE_ENV"] === "production" && !process.env["FREELLM_API_KEY"]) {
   logger.warn("FREELLM_API_KEY is not set -- gateway is open to the internet without authentication");
+}
+
+// Virtual keys load synchronously at boot. A bad file aborts startup with
+// a clear error instead of letting the gateway run with partial config.
+try {
+  const vkStore = initVirtualKeys();
+  if (vkStore.size() > 0) {
+    logger.warn(
+      { keyCount: vkStore.size() },
+      "virtual key caps are SOFT (in-memory, reset on restart). Not a billing system.",
+    );
+  }
+} catch (err) {
+  if (err instanceof VirtualKeysError) {
+    logger.fatal({ err: err.message }, "failed to load virtual keys, refusing to boot");
+    process.exit(1);
+  }
+  throw err;
 }
 
 // Stale privacy catalog warning. Entries older than 90 days should be

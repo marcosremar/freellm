@@ -98,6 +98,8 @@ beforeAll(async () => {
   process.env["OLLAMA_MODELS"] = "llama3";
   // Disable the per-IP client rate-limit so test bursts aren't blocked.
   process.env["DISABLE_CLIENT_RATELIMIT"] = "true";
+  process.env["RATE_LIMIT_RPM"] = "100000";
+  process.env["FREELLM_IDENTIFIER_LIMIT"] = "1000/60000";
   // Make sure no real provider keys are present (vitest inherits parent env).
   for (const k of [
     "GROQ_API_KEY",

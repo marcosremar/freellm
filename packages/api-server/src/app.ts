@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { auth } from "./middleware/auth.js";
 import { clientRateLimit } from "./middleware/rate-limit.js";
 import { requestId } from "./middleware/request-id.js";
+import { identifierLimit } from "./middleware/identifier-limit.js";
 
 const app: Express = express();
 
@@ -57,8 +58,13 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 // Per-client rate limiting (by IP)
 app.use(clientRateLimit);
 
-// API key auth: only enforced when FREELLM_API_KEY is set
+// API key auth: only enforced when FREELLM_API_KEY is set OR virtual keys
+// are loaded. Auth populates req.virtualKey for chat route cap enforcement.
 app.use(auth);
+
+// Per-identifier rate limit runs AFTER auth so it only sees authenticated
+// traffic. Health checks are exempt internally.
+app.use(identifierLimit);
 
 // Mount at /api (used by dashboard via proxy) and also at root (direct SDK access: base_url="/v1")
 app.use("/api", router);
