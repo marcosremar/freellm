@@ -1,9 +1,10 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type NextFunction } from "express";
 import { registry, router as gatewayRouter } from "../../gateway/index.js";
 import type { RoutingStrategy } from "../../gateway/types.js";
 import { validate } from "../../middleware/validate.js";
 import { updateRoutingSchema } from "../../gateway/schemas.js";
 import { adminAuth } from "../../middleware/admin-auth.js";
+import { freellmError } from "../../errors/index.js";
 
 const statusRouter: IRouter = Router();
 
@@ -29,17 +30,17 @@ statusRouter.get("/", (_req, res) => {
   });
 });
 
-statusRouter.post("/providers/:providerId/reset", (req, res) => {
+statusRouter.post("/providers/:providerId/reset", (req, res, next: NextFunction) => {
   const { providerId } = req.params;
   const provider = registry.getById(providerId);
 
   if (!provider) {
-    res.status(404).json({
-      error: {
+    next(
+      freellmError({
+        code: "provider_not_found",
         message: `Provider not found: ${providerId}`,
-        type: "not_found",
-      },
-    });
+      }),
+    );
     return;
   }
 

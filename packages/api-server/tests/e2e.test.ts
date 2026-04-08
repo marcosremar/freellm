@@ -188,9 +188,11 @@ describe("E2E: strict mode enforcement", () => {
         messages: [{ role: "user", content: "no" }],
       });
     expect(res.status).toBe(400);
-    expect(res.body.error.type).toBe("strict_mode_error");
+    // Phase 0 canonical taxonomy — strict mode is in the invalid_request_error bucket.
+    expect(res.body.error.type).toBe("invalid_request_error");
     expect(res.body.error.code).toBe("strict_mode_meta_model_forbidden");
     expect(res.body.error.requested_model).toBe("free-fast");
+    expect(res.body.error.request_id).toBeTypeOf("string");
   });
 
   it("does NOT failover when strict and the chosen provider 429s", async () => {

@@ -1,16 +1,29 @@
 import type { Request, Response, NextFunction } from "express";
 import type { ZodType } from "zod";
+import { freellmError, redactSecrets } from "../errors/index.js";
 
+/**
+ * Zod body validation. On failure, forwards a typed invalid_request error
+ * to the central handler — never writes the response body directly. Zod
+ * issues are sanitized through `redactSecrets` in case user input contained
+ * a Bearer token or API-key-looking value that would otherwise echo back.
+ */
 export function validate<T>(schema: ZodType<T>) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      res.status(400).json({
-        error: {
-          message: result.error.issues.map((i) => i.message).join("; "),
-          type: "invalid_request_error",
-        },
-      });
+      const issues = result.error.issues.map((i) => ({
+        path: i.path.join("."),
+        message: redactSecrets(i.message),
+      }));
+      const summary = issues.map((i) => `${i.path || "body"}: ${i.message}`).join("; ");
+      next(
+        freellmError({
+          code: "invalid_request",
+          message: summary,
+          issues,
+        }),
+      );
       return;
     }
     req.body = result.data;

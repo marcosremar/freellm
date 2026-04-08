@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createHash, timingSafeEqual } from "crypto";
+import { freellmError } from "../errors/index.js";
 
 function hashKey(key: string): Buffer {
   return createHash("sha256").update(key).digest();
@@ -10,7 +11,7 @@ function hashKey(key: string): Buffer {
  * If FREELLM_ADMIN_KEY is set, requires Authorization: Bearer <admin-key>.
  * If not set, falls through to the regular auth middleware (same key for everything).
  */
-export function adminAuth(req: Request, res: Response, next: NextFunction): void {
+export function adminAuth(req: Request, _res: Response, next: NextFunction): void {
   const adminKey = process.env["FREELLM_ADMIN_KEY"];
 
   if (!adminKey) {
@@ -23,12 +24,12 @@ export function adminAuth(req: Request, res: Response, next: NextFunction): void
   const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
 
   if (!token || !timingSafeEqual(hashKey(token), hashKey(adminKey))) {
-    res.status(403).json({
-      error: {
+    next(
+      freellmError({
+        code: "admin_required",
         message: "Admin access required. Set Authorization: Bearer <admin-key>.",
-        type: "forbidden",
-      },
-    });
+      }),
+    );
     return;
   }
 
