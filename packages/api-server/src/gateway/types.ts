@@ -6,20 +6,61 @@ export type RequestStatus =
   | "rate_limited"
   | "all_providers_failed";
 
-export interface ChatMessage {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string | null;
-  name?: string | null;
+export interface ChatToolCall {
+  id?: string;
+  type?: "function";
+  function: {
+    name?: string;
+    arguments?: string;
+  };
+  index?: number;
 }
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant" | "tool" | "developer";
+  content?: string | unknown[] | null;
+  name?: string | null;
+  tool_call_id?: string | null;
+  tool_calls?: ChatToolCall[];
+}
+
+export interface ChatTool {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+    strict?: boolean;
+  };
+}
+
+export type ChatToolChoice =
+  | "none"
+  | "auto"
+  | "required"
+  | { type: "function"; function: { name: string } };
 
 export interface ChatCompletionRequest {
   model: string;
   messages: ChatMessage[];
   stream?: boolean | null;
+  stream_options?: { include_usage?: boolean } | null;
   temperature?: number | null;
   max_tokens?: number | null;
+  max_completion_tokens?: number | null;
   top_p?: number | null;
   stop?: string | string[] | null;
+  presence_penalty?: number | null;
+  frequency_penalty?: number | null;
+  seed?: number | null;
+  tools?: ChatTool[];
+  tool_choice?: ChatToolChoice;
+  parallel_tool_calls?: boolean;
+  response_format?: {
+    type: "text" | "json_object" | "json_schema";
+    json_schema?: Record<string, unknown>;
+  };
+  user?: string;
 }
 
 export interface ChatCompletionChoice {
