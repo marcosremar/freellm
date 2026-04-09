@@ -3,12 +3,12 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.4.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-141%20passing-success?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-232%20passing-success?style=flat-square)
 
 ### You shouldn't need a credit card to call an LLM.
 
@@ -20,7 +20,7 @@ Stack 3 keys per provider and you get **~360 free requests per minute**. Includi
 
 Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
 
-**[Website](https://freellms.vercel.app)** · **[Docs](https://freellms.vercel.app/introduction/)** · [Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [Multi-tenant](#multi-tenant-virtual-sub-keys-and-per-user-limits) · [API](#api-reference) · [Dashboard](#dashboard)
+**[Website](https://freellms.vercel.app)** · **[Docs](https://freellms.vercel.app/introduction/)** · [Quickstart](#quickstart) · [Providers](#supported-providers) · [How it works](#how-it-works) · [Multi-tenant](#multi-tenant-virtual-sub-keys-and-per-user-limits) · [Browser tokens](#browser-safe-short-lived-tokens) · [API](#api-reference) · [Dashboard](#dashboard)
 
 **If you've ever burned $20 testing prompts, [star the repo](https://github.com/Devansh-365/freellm). It helps other builders find it.**
 
@@ -64,6 +64,8 @@ The request goes to the fastest available provider. If that one is rate-limited 
 - **Privacy routing.** Skip providers that train on free-tier prompts.
 - **Virtual sub-keys.** Issue scoped keys with per-key request and token caps.
 - **Per-user rate limits.** Safely expose the gateway to your app's end users.
+- **Browser-safe tokens.** Short-lived HMAC-signed tokens for static sites, no auth backend needed.
+- **Streaming tool calls that work.** Gemini and Ollama streaming tool_call bugs normalized at the gateway.
 - **Zero cost.** Every provider runs on its free tier.
 
 ## Supported providers
@@ -263,6 +265,48 @@ Point `FREELLM_VIRTUAL_KEYS_PATH` at the file, restart, and authenticate with `A
 
 Missing identifier falls back to the client IP. Literal `"undefined"` and `"null"` strings are treated as missing. Tainted values are rejected with a clear 400 instead of landing in logs.
 
+### Browser-safe short-lived tokens
+
+Want to drop an AI chatbot into a static site without giving every visitor your master key? Mint a short-lived HMAC-signed token from a one-file serverless function and pass it straight to the browser. The token is bound to an origin, expires in 15 minutes, and counts against a per-identifier bucket so one noisy user cannot burn your quota.
+
+```bash
+# Backend: mint a token using your master key
+curl https://your-gateway/v1/tokens/issue \
+  -H "Authorization: Bearer $FREELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origin": "https://yoursite.com",
+    "identifier": "session-abc",
+    "ttlSeconds": 900
+  }'
+# => { "token": "flt.eyJ2Ijox...", "expiresAt": "...", "origin": "...", "identifier": "..." }
+```
+
+```html
+<!-- Browser: use the token directly with the official OpenAI SDK -->
+<script type="module">
+  import OpenAI from "https://esm.sh/openai@^4";
+  const { token } = await fetch("/api/freellm-token").then((r) => r.json());
+  const client = new OpenAI({
+    baseURL: "https://your-gateway/v1",
+    apiKey: token,
+    dangerouslyAllowBrowser: true,
+  });
+  const stream = await client.chat.completions.create({
+    model: "free-fast",
+    messages: [{ role: "user", content: "Hi" }],
+    stream: true,
+  });
+  for await (const chunk of stream) console.log(chunk.choices[0].delta.content ?? "");
+</script>
+```
+
+Security model: max 15 minute TTL, origin-bound (browser Origin header verified on every request), per-identifier rate limiting ties into the existing bucket system, and `FREELLM_TOKEN_SECRET` must be at least 32 bytes or the gateway refuses to boot. Full walkthrough on the [Browser integration docs page](https://freellms.vercel.app/browser-integration/) and a runnable example in [`examples/browser-chatbot/`](examples/browser-chatbot/).
+
+### Streaming tool calls that actually work
+
+Gemini and Ollama both ship known bugs in their streaming tool_call output (Gemini drops the `index` field, Ollama flattens arguments outside the `function` wrapper). Every agent framework currently maintains its own workaround for these. FreeLLM fixes both at the gateway so the same stream works unchanged in the OpenAI SDK, Cline, Cursor, Aider, or anything else that expects OpenAI-spec SSE. Verified with real calls against live Gemini and reassembled by the real `openai` npm SDK.
+
 ### Securing your gateway
 
 All optional. Leave empty for local dev.
@@ -274,7 +318,9 @@ All optional. Leave empty for local dev.
 | `FREELLM_VIRTUAL_KEYS_PATH` | Path to a JSON file declaring virtual sub-keys with per-key caps. |
 | `FREELLM_IDENTIFIER_LIMIT` | Per-identifier rate limit, format `<max>/<windowMs>` (default `60/60000`). |
 | `FREELLM_IDENTIFIER_MAX_BUCKETS` | Hard ceiling on distinct identifiers tracked (default `10000`). |
-| `ALLOWED_ORIGINS` | Comma-separated CORS allowlist. |
+| `FREELLM_TOKEN_SECRET` | HMAC secret for browser tokens, minimum 32 bytes. Short = fatal boot failure. Unset = browser tokens disabled, rest of the gateway runs normally. |
+| `STREAM_IDLE_TIMEOUT_MS` | Heartbeat cadence for SSE keep-alive comments (default `30000`). |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allowlist. Required for browser-token-backed frontends. |
 
 Dependency posture and trust details live on the dedicated website pages:
 

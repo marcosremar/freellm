@@ -5,6 +5,290 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-04-09
+
+The browser-safe release. FreeLLM can now be safely exposed to an app's
+end users via short-lived HMAC-signed tokens that are bound to an origin
+and an identifier. Streaming tool calls from Gemini and Ollama are fixed
+at the gateway, the Zod schema finally accepts the full OpenAI request
+shape, the dashboard surfaces the new trust layer, and every layer was
+verified end-to-end with the real openai npm SDK hitting real provider
+APIs.
+
+### Added
+
+#### Browser-safe short-lived tokens
+
+Operators can now mint stateless HMAC-signed bearer tokens that are
+safe to ship to a browser. Integration pattern: a one-file serverless
+function calls `POST /v1/tokens/issue` with the master or virtual key,
+returns the minted token to the browser, and the browser uses the
+token directly with any OpenAI SDK. No auth backend, no session
+store, no database.
+
+- New module `src/gateway/browser-token.ts` with pure `signBrowserToken`
+  and `verifyBrowserToken` helpers. HMAC-SHA256 over a JSON payload,
+  constant-time signature comparison, base64url encoding.
+- Token format: `flt.<base64url(payload)>.<hex(hmac)>`.
+- Payload v1 carries `v`, `iat`, `exp`, `origin`, and optional
+  `identifier` and `vk` (virtual key id).
+- Max TTL 900 seconds (15 minutes), clamped at issue time.
+- Origin is embedded in the token and compared against the browser's
+  `Origin` header on every verify. Mismatch = reject.
+- `FREELLM_TOKEN_SECRET` must be at least 32 bytes. Enforced both at
+  boot and on every sign/verify operation. A short secret is a
+  fatal boot failure so no path can produce a weak token.
+- Constant-time signature comparison via `timingSafeEqual`.
+- Secret rotation immediately invalidates all outstanding tokens
+  (intentional kill switch for compromised deployments).
+
+#### `POST /v1/tokens/issue` endpoint
+
+Admin-auth-equivalent mint endpoint that any existing master key,
+admin key, or virtual key can call. Browser tokens themselves cannot
+mint new browser tokens (chain guard). When a virtual key is the
+issuer, the resulting token inherits its id so the existing Phase 2
+cap enforcement flows through untouched.
+
+```bash
+curl https://your-gateway/v1/tokens/issue \
+  -H "Authorization: Bearer $FREELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "origin": "https://yoursite.com",
+    "identifier": "session-abc",
+    "ttlSeconds": 900
+  }'
+
+# Response:
+# {
+#   "token": "flt.eyJ2IjoxLCJpYXQiOi...",
+#   "expiresAt": "2026-04-09T07:15:00.000Z",
+#   "origin": "https://yoursite.com",
+#   "identifier": "session-abc"
+# }
+```
+
+Origin must be `https://*` or `http://localhost[:port]`. Identifier
+must match `^[A-Za-z0-9_.:-]{1,128}$`, same pattern as the per-user
+rate limiter. TTL clamped to `[1, 900]` seconds.
+
+#### Browser token authentication
+
+The auth middleware now recognizes `flt.*` bearers alongside the
+master key, admin key, and virtual keys. Verification checks the
+signature, expiry, and Origin header atomically. On success:
+
+- `req.browserToken` carries the verified payload
+- `req.virtualKey` is hydrated if the token carries a virtual key id
+- The token's identifier is copied into `X-FreeLLM-Identifier` so the
+  existing per-user rate limiter picks it up with zero extra code
+- All other middleware (privacy routing, strict mode, streaming
+  normalizer, cap enforcement) works unchanged
+
+On failure the middleware returns 401 `invalid_api_key` with the
+specific rejection reason in the message (origin_mismatch, expired,
+bad_signature, etc.).
+
+#### Streaming tool_call normalization
+
+Every chat completion stream now flows through a per-provider
+normalizer that sits between the upstream fetch and the downstream
+response. Fixes three widely-reported bugs without touching the
+upstreams or the clients:
+
+- **Gemini** `index` field missing on streaming tool_call deltas: the
+  normalizer assigns an index per function name so argument fragments
+  across chunks land on the same logical tool call, and stamps
+  `type: "function"` where it's missing. Multi-tool parallel calls
+  get distinct indices tracked by name.
+- **Ollama** flat-argument hoisting: Ollama sometimes emits
+  `arguments` at the top level of a tool_call rather than inside
+  `function`. The normalizer hoists it into the expected shape and
+  reuses the last-seen index for subsequent fragments.
+- **Malformed chunk resilience**: every transform is wrapped in
+  try/catch so one bad byte from upstream logs a warning and forwards
+  the original event verbatim instead of crashing the whole response.
+
+New module tree under `src/gateway/streaming/`:
+
+- `sse.ts` tolerant SSE parser and serializer, handles CRLF, partial
+  chunks, `[DONE]`, and comment heartbeats.
+- `types.ts` minimal OpenAI chunk shape plus `Normalizer` interface.
+- `normalizer.ts` per-provider dispatcher with passthrough default.
+- `passthrough.ts` no-op for Groq, Cerebras, NIM, and Mistral.
+- `gemini.ts` and `ollama.ts` provider-specific fixes.
+- `pipeline.ts` ties parser, dispatcher, and serializer together with
+  defensive try/catch at every stage.
+
+Heartbeat comment `\n: keep-alive\n\n` is written every
+`STREAM_IDLE_TIMEOUT_MS` (default 30s) so proxies on the path like
+Railway and Cloudflare do not drop slow streams. Client disconnect
+is detected via `res.on('close')` and cancels the upstream reader
+so we do not burn provider quota into a dead socket.
+
+#### Full OpenAI request shape accepted
+
+The Zod schema and matching TypeScript types now accept the full
+OpenAI Chat Completions surface, including:
+
+- `tools` array with nested `function` definition, name, description,
+  parameters, and strict flag
+- `tool_choice` as `"none" | "auto" | "required"` or a specific
+  function reference
+- `parallel_tool_calls`
+- `response_format` text / json_object / json_schema envelope
+- `stream_options.include_usage` for per-chunk usage accounting
+- `max_completion_tokens` alongside `max_tokens`
+- `presence_penalty` and `frequency_penalty` validated in `[-2, 2]`
+- `seed` and `user` for observability
+- `tool_call_id` on tool-role messages
+- `tool_calls` array on assistant-role messages
+- `developer` role (used by newer OpenAI models)
+
+Strict mode is preserved so genuinely unknown fields still throw.
+Only the known OpenAI surface is accepted.
+
+Caught while verifying the streaming normalizer with a real openai
+npm SDK client: the previous schema rejected every tool-calling
+request with 400 before it ever reached the streaming pipeline, so
+the normalizer was unreachable in practice for the exact audience it
+was built for. Fixed and regression-tested against the shapes the
+real SDK sends.
+
+#### Dashboard v1.5 surface
+
+- **Provider cards** carry a color-coded Trust badge:
+  `NO-TRAIN` (emerald), `LOCAL` (sky), `CONFIG` (amber), or
+  `TRAINS` (rose). Click opens the provider's actual terms of service
+  URL in a new tab; hover shows the last-verified date.
+- **Virtual Keys panel** on the main dashboard page lists every
+  loaded virtual sub-key with per-key progress bars for daily request
+  cap and daily token cap (rose tint when usage crosses 90%), allowed
+  models surfaced as monospace badges, expired keys flagged, and a
+  persistent amber reminder that caps are soft.
+- **Browser Tokens card** shows a live enabled/disabled status with
+  an emerald pulsing dot when `FREELLM_TOKEN_SECRET` is set, max TTL
+  and min secret length visible at a glance, a link out to the
+  `/browser-integration` docs page, and an amber callout on the
+  disabled state telling operators exactly which env var to set.
+- `GET /v1/status` response grew a new `browserTokens` field
+  `{ enabled, minSecretBytes, maxTtlSeconds }` plus a `privacy` block
+  on every `ProviderStatus` sourced from the `PROVIDER_PRIVACY`
+  catalog.
+- New admin-only endpoint `GET /v1/status/virtual-keys` returns a
+  masked inventory of loaded virtual sub-keys (first 12 chars plus
+  last 4) with cap limits, remaining usage, allowed models, expiry,
+  and a `softCapWarning` string reminding the caller that counters
+  reset on restart.
+
+#### Browser integration docs and runnable example
+
+- `packages/website/src/content/docs/browser-integration.mdx` walks
+  through the full flow: mint from a Node or Flask backend, use the
+  token in the browser via the official openai SDK (with
+  `dangerouslyAllowBrowser: true`), handle expiry, verify origin
+  binding, secret rotation, common pitfalls.
+- New **Integration** sidebar group on the Starlight website. 17
+  pages total, up from 16.
+- `examples/browser-chatbot/` copy-paste runnable demo: 108-line
+  self-contained HTML chatbot using the openai npm package via
+  `esm.sh`, a 37-line Vercel serverless function that mints tokens
+  server-side from env vars, and a 58-line README covering setup,
+  local development, Vercel deploy, and security notes. No
+  frameworks, no build step.
+
+### Changed
+
+- `auth` middleware now accepts `FREELLM_ADMIN_KEY` as a valid base
+  credential alongside the master key and virtual keys, so the
+  `admin_required` 403 path is actually reachable when an operator
+  runs with a distinct admin token. Previously the admin-only routes
+  were unreachable without also setting `FREELLM_API_KEY`.
+- `ProviderStatusInfo` gained an optional `privacy` block populated
+  from the `PROVIDER_PRIVACY` catalog with `policy`, `sourceUrl`, and
+  `lastVerified` fields.
+- `GatewayStatus` gained a `browserTokens` block surfacing the boot
+  state of the feature.
+
+### Configuration
+
+New environment variables:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `FREELLM_TOKEN_SECRET` | unset | HMAC secret for browser tokens, minimum 32 bytes. Short = fatal boot failure. Unset = browser tokens disabled, the rest of the gateway runs unchanged. |
+| `STREAM_IDLE_TIMEOUT_MS` | `30000` | Heartbeat cadence for the SSE keep-alive comment. |
+
+Previously shipped in v1.4.0 and still supported:
+`FREELLM_IDENTIFIER_LIMIT`, `FREELLM_IDENTIFIER_MAX_BUCKETS`,
+`FREELLM_VIRTUAL_KEYS_PATH`.
+
+### Tests
+
+232 passing tests across 19 files (up from 146 at v1.4.0):
+
+- `tests/browser-token.test.ts` 22 unit tests covering every sign and
+  verify edge case (short secret, bad signature, tampered payload,
+  expired, origin mismatch, missing origin, wrong secret, all the
+  rejection reasons)
+- `tests/tokens-e2e.test.ts` 11 integration tests booting the real
+  Express app against a fake upstream: full mint + use cycle,
+  rejected http:// origins, localhost acceptance, ttl over 900
+  rejection, unauth'd mint rejection, unsafe identifier rejection,
+  successful chat completion with an origin match, spoofed origin
+  rejection, missing origin rejection, tampered signature rejection,
+  chain guard against browser tokens minting browser tokens
+- `tests/schema-tools.test.ts` 12 regression tests for the exact
+  payload shapes the real openai SDK sends, plus negative cases for
+  unknown fields, invalid tool types, and malformed tool_choice
+- `tests/streaming-normalizer.test.ts` fixture-driven tests for
+  Gemini missing-index, multi-tool, mixed text+tool, Ollama split
+  arguments, Groq passthrough, and malformed chunk resilience
+- `tests/sse-primitives.test.ts` 15 unit tests for the parser and
+  serializer (partial pushes, CRLF, comment heartbeats, flush, DONE)
+- `tests/streaming-e2e.test.ts` boots the real Express app against a
+  fake upstream emitting a broken tool_call stream and verifies the
+  client sees the corrected bytes
+- `tests/status-v14.test.ts` now asserts the new `browserTokens`
+  block and every `privacy` field on status
+- Every existing test from v1.4.0 still passes
+
+### Verified end-to-end against real providers
+
+- **Groq llama-3.3-70b-versatile** returned the exact requested
+  response to a non-streaming completion via `free-fast`
+- **Cerebras llama3.1-8b** streamed a real count-to-3 response via
+  `free-fast` (router rotation in action)
+- **Gemini 2.5 Flash** returned a streaming tool call with
+  `{"city":"Paris"}` through the normalizer, reassembled correctly
+  by the real openai Node SDK iterator
+- **Browser token flow** end-to-end: mint with the master key, call
+  Groq through the minted token using the real openai SDK with an
+  Origin header, got back `"browser token flow ok"` exactly as
+  requested, and verified that a spoofed Origin returns 401
+- **CORS preflight** tested with real `OPTIONS` requests: allowed
+  origins get the expected ACL headers, disallowed origins get no
+  allow-origin header so browsers block the request before it
+  reaches the middleware
+
+### Migration
+
+Fully backwards compatible. Every new capability is opt-in:
+
+- Browser tokens activate only when `FREELLM_TOKEN_SECRET` is set
+- Streaming normalizer is transparent for compliant providers
+  (passthrough) and a correctness fix for Gemini and Ollama
+- Schema additions are all optional fields; old clients still work
+- Dashboard changes are additive, no existing panels removed
+
+Error response shapes are unchanged from v1.4.0. Clients that handle
+the canonical FreeLLMError taxonomy continue to work without changes.
+
+[1.5.0]: https://github.com/Devansh-365/freellm/releases/tag/v1.5.0
+
+---
+
 ## [1.4.0] - 2026-04-09
 
 The honest-gateway release. FreeLLM now tells you exactly which provider
