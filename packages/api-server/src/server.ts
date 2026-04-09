@@ -3,11 +3,34 @@ import { logger } from "./lib/logger.js";
 import { PROVIDER_PRIVACY, daysSinceVerified } from "./gateway/privacy.js";
 import { initVirtualKeys } from "./gateway/virtual-keys-singleton.js";
 import { VirtualKeysError } from "./gateway/virtual-keys.js";
+import { MIN_SECRET_BYTES } from "./gateway/browser-token.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 
 if (process.env["NODE_ENV"] === "production" && !process.env["FREELLM_API_KEY"]) {
   logger.warn("FREELLM_API_KEY is not set -- gateway is open to the internet without authentication");
+}
+
+// Browser token secret check. If the operator set FREELLM_TOKEN_SECRET,
+// it must be at least 32 bytes. A short secret is a hard boot failure
+// so we never sign tokens with weak material. If the secret is unset,
+// the issue endpoint and the flt.* auth branch are both disabled and
+// everything else still works.
+const browserTokenSecret = process.env["FREELLM_TOKEN_SECRET"];
+if (browserTokenSecret) {
+  const bytes = Buffer.byteLength(browserTokenSecret, "utf8");
+  if (bytes < MIN_SECRET_BYTES) {
+    logger.fatal(
+      { bytes, min: MIN_SECRET_BYTES },
+      "FREELLM_TOKEN_SECRET is too short, refusing to boot",
+    );
+    process.exit(1);
+  }
+  logger.info({ bytes }, "browser tokens enabled");
+} else {
+  logger.warn(
+    "FREELLM_TOKEN_SECRET not set, browser tokens disabled (/v1/tokens/issue will return 400)",
+  );
 }
 
 // Virtual keys load synchronously at boot. A bad file aborts startup with

@@ -3,6 +3,13 @@ import { createHash, timingSafeEqual } from "crypto";
 import { freellmError } from "../errors/index.js";
 import { getVirtualKeyStore } from "../gateway/virtual-keys-singleton.js";
 import type { VirtualKey } from "../gateway/virtual-keys.js";
+import {
+  verifyBrowserToken,
+  isBrowserTokenEnabled,
+  BrowserTokenError,
+  TOKEN_PREFIX,
+  type BrowserTokenPayload,
+} from "../gateway/browser-token.js";
 
 /** Hash a string to a fixed-length buffer for timing-safe comparison. */
 function hashKey(key: string): Buffer {
@@ -12,12 +19,16 @@ function hashKey(key: string): Buffer {
 /**
  * Express request augmentation: when a virtual key authenticated the
  * request, the chat route reads it back from `req.virtualKey` to enforce
- * its caps and model allowlist before routing to a provider.
+ * its caps and model allowlist before routing to a provider. When a
+ * browser token authenticated the request, `req.browserToken` carries
+ * the verified payload so downstream routes can block token chaining
+ * and consult the token's identifier + origin.
  */
 declare global {
   namespace Express {
     interface Request {
       virtualKey?: VirtualKey;
+      browserToken?: BrowserTokenPayload;
     }
   }
 }
@@ -103,6 +114,50 @@ export function auth(req: Request, _res: Response, next: NextFunction): void {
     if (virtualKey) {
       req.virtualKey = virtualKey;
       next();
+      return;
+    }
+  }
+
+  // 4. Try browser tokens. A valid flt.* bearer plus a matching Origin
+  //    header authenticates the request and binds it to the token's
+  //    identifier and optional virtual key. Browser tokens CANNOT
+  //    authenticate against admin-only routes (the adminAuth middleware
+  //    checks for FREELLM_ADMIN_KEY specifically), but otherwise they
+  //    behave like a scoped bearer credential.
+  if (token.startsWith(TOKEN_PREFIX) && isBrowserTokenEnabled()) {
+    try {
+      const payload = verifyBrowserToken({
+        token,
+        secret: process.env["FREELLM_TOKEN_SECRET"]!,
+        expectedOrigin: req.headers["origin"] ?? null,
+      });
+      req.browserToken = payload;
+      // If the token was minted by a virtual-key holder, hydrate
+      // req.virtualKey so the chat route enforces its caps.
+      if (payload.vk && hasVirtualKeys) {
+        const vk = virtualKeyStore.findByToken(payload.vk);
+        if (vk) req.virtualKey = vk;
+      }
+      // If the token carries an identifier, hint it onto the request so
+      // the identifier-limit middleware picks it up through the header
+      // path it already reads (set via req.headers mutation so the
+      // existing middleware keeps its single code path).
+      if (payload.identifier && !req.headers["x-freellm-identifier"]) {
+        req.headers["x-freellm-identifier"] = payload.identifier;
+      }
+      next();
+      return;
+    } catch (err) {
+      if (err instanceof BrowserTokenError) {
+        next(
+          freellmError({
+            code: "invalid_api_key",
+            message: `Browser token rejected: ${err.reason}`,
+          }),
+        );
+        return;
+      }
+      next(err);
       return;
     }
   }

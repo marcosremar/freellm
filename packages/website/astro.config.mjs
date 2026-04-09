@@ -47,6 +47,12 @@ export default defineConfig({
           ],
         },
         {
+          label: "Integration",
+          items: [
+            { label: "Browser integration", slug: "browser-integration" },
+          ],
+        },
+        {
           label: "Features",
           items: [
             { label: "Multi-Key Rotation", slug: "features/multi-key" },
