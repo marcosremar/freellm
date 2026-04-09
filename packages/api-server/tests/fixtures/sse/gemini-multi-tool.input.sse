@@ -1,0 +1,6 @@
+data: {"id":"gem-2","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{"tool_calls":[{"function":{"name":"get_weather","arguments":"{\"city\":\"Tokyo\"}"}}]}}]}
+
+data: {"id":"gem-2","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{"tool_calls":[{"function":{"name":"get_time","arguments":"{\"tz\":\"JST\"}"}}]}}]}
+
+data: [DONE]
+

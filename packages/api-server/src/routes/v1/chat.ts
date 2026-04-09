@@ -11,6 +11,13 @@ import { parsePrivacyHeader } from "../../gateway/privacy.js";
 import { getVirtualKeyStore } from "../../gateway/virtual-keys-singleton.js";
 import { VirtualKeyCheckError, type VirtualKey } from "../../gateway/virtual-keys.js";
 import { freellmError } from "../../errors/index.js";
+import { StreamingPipeline } from "../../gateway/streaming/pipeline.js";
+import { serializeHeartbeat } from "../../gateway/streaming/sse.js";
+
+const STREAM_IDLE_TIMEOUT_MS = parseInt(
+  process.env["STREAM_IDLE_TIMEOUT_MS"] ?? "30000",
+  10,
+);
 
 const chatRouter: IRouter = Router();
 
@@ -168,15 +175,42 @@ async function handleStreamingRequest(
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    const pipeline = new StreamingPipeline(provider.id);
+
+    // Detect client disconnect and cancel the upstream reader so we
+    // don't keep burning provider quota into a dead socket.
+    let clientClosed = false;
+    res.on("close", () => {
+      if (!res.writableEnded) {
+        clientClosed = true;
+        reader.cancel().catch(() => {});
+      }
+    });
+
+    // Idle heartbeat. Prevents proxies on the path (Railway, Cloudflare,
+    // etc.) from dropping a slow stream. Ticks every STREAM_IDLE_TIMEOUT_MS
+    // regardless of traffic. Cheap SSE comment, no client-side parse cost.
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(serializeHeartbeat());
+      }
+    }, STREAM_IDLE_TIMEOUT_MS);
 
     try {
       while (true) {
         const { done, value } = await reader.read();
+        if (clientClosed) break;
         if (done) break;
         if (value) {
-          res.write(decoder.decode(value, { stream: true }));
+          const decoded = decoder.decode(value, { stream: true });
+          const normalized = pipeline.push(decoded);
+          if (normalized.length > 0) res.write(normalized);
         }
       }
+
+      // Drain any final event buffered by the pipeline.
+      const tail = pipeline.flush();
+      if (tail.length > 0) res.write(tail);
 
       // Log success once, provider.onSuccess was already called in route()
       gatewayRouter.requestLog.add({
@@ -203,6 +237,8 @@ async function handleStreamingRequest(
         streaming: true,
       });
       logger.error({ err: streamErr }, "Stream relay error");
+    } finally {
+      clearInterval(heartbeat);
     }
 
     res.end();

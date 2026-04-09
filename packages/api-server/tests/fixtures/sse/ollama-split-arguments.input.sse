@@ -1,0 +1,8 @@
+data: {"id":"oll-1","object":"chat.completion.chunk","created":1,"model":"llama3","choices":[{"index":0,"delta":{"tool_calls":[{"function":{"name":"read_file"}}]}}]}
+
+data: {"id":"oll-1","object":"chat.completion.chunk","created":1,"model":"llama3","choices":[{"index":0,"delta":{"tool_calls":[{"arguments":"{\"path\""}]}}]}
+
+data: {"id":"oll-1","object":"chat.completion.chunk","created":1,"model":"llama3","choices":[{"index":0,"delta":{"tool_calls":[{"arguments":":\"/etc/hosts\"}"}]}}]}
+
+data: [DONE]
+

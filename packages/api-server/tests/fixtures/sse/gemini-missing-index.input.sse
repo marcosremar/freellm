@@ -1,0 +1,10 @@
+data: {"id":"gem-1","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{"role":"assistant"}}]}
+
+data: {"id":"gem-1","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{"tool_calls":[{"function":{"name":"search_web","arguments":"{\"q"}}]}}]}
+
+data: {"id":"gem-1","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{"tool_calls":[{"function":{"arguments":"\":\"freellm\"}"}}]}}]}
+
+data: {"id":"gem-1","object":"chat.completion.chunk","created":1,"model":"gemini-2.5-flash","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
+
