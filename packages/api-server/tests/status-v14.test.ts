@@ -38,6 +38,8 @@ beforeAll(async () => {
   // that the adminAuth middleware checks for mutation and inventory routes.
   process.env["FREELLM_API_KEY"] = "master-key-for-status-v14-test";
   process.env["FREELLM_ADMIN_KEY"] = "admin-key-for-status-v14-test";
+  process.env["FREELLM_TOKEN_SECRET"] =
+    "status-v14-browser-token-secret-32bytes!!";
   process.env["FREELLM_VIRTUAL_KEYS_PATH"] = virtualKeysPath;
   process.env["RATE_LIMIT_RPM"] = "100000";
   process.env["FREELLM_IDENTIFIER_LIMIT"] = "1000/60000";
@@ -86,6 +88,17 @@ describe("GET /v1/status privacy field", () => {
     expect(byId.get("groq")).toBe("no-training");
     expect(byId.get("gemini")).toBe("free-tier-trains");
     expect(byId.get("ollama")).toBe("local");
+  });
+});
+
+describe("GET /v1/status browserTokens field", () => {
+  it("returns enabled=true when FREELLM_TOKEN_SECRET meets the minimum length", async () => {
+    const res = await request(app).get("/v1/status").set("authorization", MASTER_BEARER);
+    expect(res.status).toBe(200);
+    expect(res.body.browserTokens).toBeDefined();
+    expect(res.body.browserTokens.enabled).toBe(true);
+    expect(res.body.browserTokens.minSecretBytes).toBe(32);
+    expect(res.body.browserTokens.maxTtlSeconds).toBe(900);
   });
 });
 

@@ -137,6 +137,15 @@ export interface CacheStats {
   hitRate: number;
 }
 
+export interface BrowserTokensInfo {
+  /** True when FREELLM_TOKEN_SECRET is set and meets the minimum length. */
+  enabled: boolean;
+  /** Minimum bytes required for FREELLM_TOKEN_SECRET. */
+  minSecretBytes: number;
+  /** Max ttl the issue endpoint will honor, in seconds. */
+  maxTtlSeconds: number;
+}
+
 export interface GatewayStatus {
   routingStrategy: RoutingStrategy;
   totalRequests: number;
@@ -146,6 +155,7 @@ export interface GatewayStatus {
   recentRequests: RequestLogEntry[];
   usage: TokenUsageTotals;
   cache: CacheStats;
+  browserTokens: BrowserTokensInfo;
 }
 
 export interface KeyStatus {

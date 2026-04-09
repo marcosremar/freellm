@@ -434,6 +434,18 @@ components:
         - timestamp
         - streaming
 
+    BrowserTokensInfo:
+      type: object
+      description: Boot state of the browser token feature.
+      properties:
+        enabled:
+          type: boolean
+        minSecretBytes:
+          type: integer
+        maxTtlSeconds:
+          type: integer
+      required: [enabled, minSecretBytes, maxTtlSeconds]
+
     GatewayStatus:
       type: object
       properties:
@@ -454,6 +466,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RequestLogEntry"
+        browserTokens:
+          $ref: "#/components/schemas/BrowserTokensInfo"
       required:
         - routingStrategy
         - totalRequests

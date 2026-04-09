@@ -7,6 +7,7 @@ import { MetricsRow } from "@/components/metrics-row";
 import { ProviderCard } from "@/components/provider-card";
 import { RequestTable } from "@/components/request-table";
 import { VirtualKeysPanel } from "@/components/virtual-keys-panel";
+import { BrowserTokensCard } from "@/components/browser-tokens-card";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -84,7 +85,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <VirtualKeysPanel />
+      {/* Trust row: virtual keys and browser token status side by side on
+          large screens, stacked on mobile. Virtual keys renders nothing
+          when no keys are loaded, so the browser-token card takes the
+          full width in that case via the grid's auto-fill behaviour. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <VirtualKeysPanel />
+        {status?.browserTokens && (
+          <BrowserTokensCard info={status.browserTokens} />
+        )}
+      </div>
 
       <RequestTable requests={status?.recentRequests ?? []} />
     </div>

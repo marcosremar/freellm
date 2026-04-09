@@ -6,6 +6,20 @@ import { updateRoutingSchema } from "../../gateway/schemas.js";
 import { adminAuth } from "../../middleware/admin-auth.js";
 import { freellmError } from "../../errors/index.js";
 import { getVirtualKeyStore } from "../../gateway/virtual-keys-singleton.js";
+import {
+  isBrowserTokenEnabled,
+  MIN_SECRET_BYTES,
+  MAX_TTL_SECONDS,
+} from "../../gateway/browser-token.js";
+import type { BrowserTokensInfo } from "../../gateway/types.js";
+
+function browserTokensInfo(): BrowserTokensInfo {
+  return {
+    enabled: isBrowserTokenEnabled(),
+    minSecretBytes: MIN_SECRET_BYTES,
+    maxTtlSeconds: MAX_TTL_SECONDS,
+  };
+}
 
 const statusRouter: IRouter = Router();
 
@@ -30,6 +44,7 @@ statusRouter.get("/", (_req, res) => {
     recentRequests,
     usage: gateway,
     cache: cacheStats,
+    browserTokens: browserTokensInfo(),
   });
 });
 
@@ -127,6 +142,7 @@ statusRouter.patch("/routing", validate(updateRoutingSchema), (req, res) => {
     recentRequests,
     usage: gateway,
     cache: cacheStats,
+    browserTokens: browserTokensInfo(),
   });
 });
 

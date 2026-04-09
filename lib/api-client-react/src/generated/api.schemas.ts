@@ -133,6 +133,12 @@ export interface RequestLogEntry {
   cached?: boolean;
 }
 
+export interface BrowserTokensInfo {
+  enabled: boolean;
+  minSecretBytes: number;
+  maxTtlSeconds: number;
+}
+
 export interface CacheStats {
   enabled: boolean;
   ttlMs: number;
@@ -154,6 +160,7 @@ export interface GatewayStatus {
   recentRequests: RequestLogEntry[];
   usage: TokenUsageTotals;
   cache: CacheStats;
+  browserTokens?: BrowserTokensInfo;
 }
 
 export interface UpdateRoutingStrategyRequest {
