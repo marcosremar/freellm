@@ -38,6 +38,7 @@ declare global {
  */
 export function auth(req: Request, _res: Response, next: NextFunction): void {
   const requiredKey = process.env["FREELLM_API_KEY"];
+  const adminKey = process.env["FREELLM_ADMIN_KEY"];
   const virtualKeyStore = getVirtualKeyStore();
   const hasVirtualKeys = virtualKeyStore.size() > 0;
 
@@ -47,8 +48,8 @@ export function auth(req: Request, _res: Response, next: NextFunction): void {
     return;
   }
 
-  // Fully open gateway: no master key, no virtual keys.
-  if (!requiredKey && !hasVirtualKeys) {
+  // Fully open gateway: no master key, no admin key, no virtual keys.
+  if (!requiredKey && !adminKey && !hasVirtualKeys) {
     next();
     return;
   }
@@ -78,7 +79,21 @@ export function auth(req: Request, _res: Response, next: NextFunction): void {
     }
   }
 
-  // 2. Try virtual keys. Constant-time comparison by hashing both
+  // 2. Try the admin key. The admin key is a superset privilege so
+  //    the base auth layer accepts it; the adminAuth middleware then
+  //    enforces the admin-only constraint on sensitive routes.
+  if (adminKey) {
+    try {
+      if (timingSafeEqual(hashKey(token), hashKey(adminKey))) {
+        next();
+        return;
+      }
+    } catch {
+      // Defensive: hash lengths are equal by construction.
+    }
+  }
+
+  // 3. Try virtual keys. Constant-time comparison by hashing both
   //    before `.get()` would be overkill because the Map key is the
   //    full token string and lookup time leaks nothing useful once
   //    the token format is known. The format itself (`sk-freellm-`

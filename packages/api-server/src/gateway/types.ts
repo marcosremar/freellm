@@ -115,6 +115,15 @@ export interface KeyStatus {
   retryAfterMs: number | null;
 }
 
+export interface ProviderPrivacyInfo {
+  /** "no-training" | "free-tier-trains" | "configurable" | "local" */
+  policy: string;
+  /** Public URL documenting the policy on the provider's own site. */
+  sourceUrl: string;
+  /** ISO date (YYYY-MM-DD) when the policy was last human-verified. */
+  lastVerified: string;
+}
+
 export interface ProviderStatusInfo {
   id: string;
   name: string;
@@ -131,6 +140,8 @@ export interface ProviderStatusInfo {
   keysAvailable: number;
   keys: KeyStatus[];
   usage: TokenUsageTotals;
+  /** Training policy + source, surfaced from PROVIDER_PRIVACY. */
+  privacy?: ProviderPrivacyInfo;
 }
 
 export interface GatewayError {

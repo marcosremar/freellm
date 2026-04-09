@@ -5,12 +5,15 @@ import { validate } from "../../middleware/validate.js";
 import { updateRoutingSchema } from "../../gateway/schemas.js";
 import { adminAuth } from "../../middleware/admin-auth.js";
 import { freellmError } from "../../errors/index.js";
+import { getVirtualKeyStore } from "../../gateway/virtual-keys-singleton.js";
 
 const statusRouter: IRouter = Router();
 
 // Admin auth for mutation endpoints (reset, routing strategy changes)
+// and for the virtual-keys inventory (sensitive, operator-only).
 statusRouter.post("/providers/:providerId/reset", adminAuth);
 statusRouter.patch("/routing", adminAuth);
+statusRouter.get("/virtual-keys", adminAuth);
 
 statusRouter.get("/", (_req, res) => {
   const stats = gatewayRouter.requestLog.getStats();
@@ -65,6 +68,44 @@ statusRouter.post("/providers/:providerId/reset", (req, res, next: NextFunction)
     keysAvailable: keys.filter((k) => !k.rateLimited).length,
     keys,
     usage,
+  });
+});
+
+/**
+ * Operator inventory of loaded virtual sub-keys and their current usage.
+ * The raw key token is replaced by a masked id so a screen-share from the
+ * dashboard cannot leak bearer tokens. Caps and usage are live.
+ */
+statusRouter.get("/virtual-keys", (_req, res) => {
+  const store = getVirtualKeyStore();
+  const now = Date.now();
+  const keys = store.list().map((key) => {
+    const usage = store.usage(key.id, now);
+    const maskedId =
+      key.id.length <= 12
+        ? key.id
+        : `${key.id.slice(0, 12)}...${key.id.slice(-4)}`;
+    const expiresAtMs = key.expiresAt ? Date.parse(key.expiresAt) : null;
+    const expired = expiresAtMs != null && Number.isFinite(expiresAtMs) && now > expiresAtMs;
+    return {
+      maskedId,
+      label: key.label,
+      allowedModels: key.allowedModels ?? null,
+      expiresAt: key.expiresAt ?? null,
+      expired,
+      dailyRequestCap: key.dailyRequestCap ?? null,
+      dailyTokenCap: key.dailyTokenCap ?? null,
+      requestsInWindow: usage?.requestsInWindow ?? 0,
+      tokensInWindow: usage?.tokensInWindow ?? 0,
+      requestCapRemaining: usage?.requestCapRemaining ?? null,
+      tokenCapRemaining: usage?.tokenCapRemaining ?? null,
+    };
+  });
+  res.json({
+    softCapWarning:
+      "Counters are in-memory, rolling 24h, and reset on process restart. Not a billing system.",
+    count: keys.length,
+    keys,
   });
 });
 

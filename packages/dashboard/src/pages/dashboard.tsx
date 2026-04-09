@@ -6,6 +6,7 @@ import { RoutingToggle } from "@/components/routing-toggle";
 import { MetricsRow } from "@/components/metrics-row";
 import { ProviderCard } from "@/components/provider-card";
 import { RequestTable } from "@/components/request-table";
+import { VirtualKeysPanel } from "@/components/virtual-keys-panel";
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -82,6 +83,8 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <VirtualKeysPanel />
 
       <RequestTable requests={status?.recentRequests ?? []} />
     </div>

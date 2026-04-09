@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, Clock, Key, Coins } from "lucide-react";
+import { AlertTriangle, RefreshCw, Clock, Key, Coins, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,50 @@ interface ProviderCardProps {
       totalTokens: number;
       requestCount: number;
     };
+    privacy?: {
+      policy: string;
+      sourceUrl: string;
+      lastVerified: string;
+    };
   };
   onReset: (providerId: string) => void;
   resetPending: boolean;
+}
+
+/**
+ * Style a privacy label. The four policies carry real semantic weight:
+ * emerald for "safe" (no-training, local), amber for "configurable"
+ * (operator responsibility), rose for "free-tier trains" so it visually
+ * warns anyone glancing at the dashboard.
+ */
+function getPrivacyStyle(policy: string) {
+  switch (policy) {
+    case "no-training":
+      return "bg-emerald-500/10 text-emerald-500 border-emerald-500/30";
+    case "local":
+      return "bg-sky-500/10 text-sky-500 border-sky-500/30";
+    case "configurable":
+      return "bg-amber-500/10 text-amber-500 border-amber-500/30";
+    case "free-tier-trains":
+      return "bg-rose-500/10 text-rose-500 border-rose-500/30";
+    default:
+      return "bg-muted text-muted-foreground border-border/50";
+  }
+}
+
+function getPrivacyLabel(policy: string) {
+  switch (policy) {
+    case "no-training":
+      return "NO-TRAIN";
+    case "local":
+      return "LOCAL";
+    case "configurable":
+      return "CONFIG";
+    case "free-tier-trains":
+      return "TRAINS";
+    default:
+      return policy.toUpperCase();
+  }
 }
 
 function getStatusColor(state: string, enabled: boolean) {
@@ -84,6 +125,25 @@ export function ProviderCard({ provider, onReset, resetPending }: ProviderCardPr
                 <Key className="w-2.5 h-2.5" />
                 {keysAvailable}/{keyCount}
               </Badge>
+            )}
+            {provider.privacy && (
+              <a
+                href={provider.privacy.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Training policy: ${provider.privacy.policy}\nVerified ${provider.privacy.lastVerified}\nSource: ${provider.privacy.sourceUrl}`}
+              >
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "uppercase text-[10px] tracking-wider flex items-center gap-1 cursor-help",
+                    getPrivacyStyle(provider.privacy.policy),
+                  )}
+                >
+                  <ShieldCheck className="w-2.5 h-2.5" />
+                  {getPrivacyLabel(provider.privacy.policy)}
+                </Badge>
+              </a>
             )}
           </div>
         </div>

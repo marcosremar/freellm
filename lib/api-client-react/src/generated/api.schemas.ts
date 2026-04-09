@@ -73,6 +73,12 @@ export interface TokenUsageTotals {
   requestCount: number;
 }
 
+export interface ProviderPrivacy {
+  policy: "no-training" | "free-tier-trains" | "configurable" | "local";
+  sourceUrl: string;
+  lastVerified: string;
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
@@ -89,6 +95,27 @@ export interface ProviderStatus {
   keysAvailable: number;
   keys: KeyStatus[];
   usage: TokenUsageTotals;
+  privacy?: ProviderPrivacy;
+}
+
+export interface VirtualKeySummary {
+  maskedId: string;
+  label: string;
+  allowedModels: string[] | null;
+  expiresAt: string | null;
+  expired: boolean;
+  dailyRequestCap: number | null;
+  dailyTokenCap: number | null;
+  requestsInWindow: number;
+  tokensInWindow: number;
+  requestCapRemaining: number | null;
+  tokenCapRemaining: number | null;
+}
+
+export interface VirtualKeysResponse {
+  softCapWarning: string;
+  count: number;
+  keys: VirtualKeySummary[];
 }
 
 export interface RequestLogEntry {

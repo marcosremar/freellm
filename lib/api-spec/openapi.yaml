@@ -292,6 +292,19 @@ components:
       type: string
       enum: [closed, open, half_open]
 
+    ProviderPrivacy:
+      type: object
+      description: Training policy declared by the provider, with a source URL and human-verified date.
+      properties:
+        policy:
+          type: string
+          enum: [no-training, free-tier-trains, configurable, local]
+        sourceUrl:
+          type: string
+        lastVerified:
+          type: string
+      required: [policy, sourceUrl, lastVerified]
+
     ProviderStatus:
       type: object
       properties:
@@ -321,6 +334,8 @@ components:
           type: array
           items:
             type: string
+        privacy:
+          $ref: "#/components/schemas/ProviderPrivacy"
       required:
         - id
         - name
@@ -331,6 +346,60 @@ components:
         - failedRequests
         - rateLimitedRequests
         - models
+
+    VirtualKeySummary:
+      type: object
+      description: Operator view of a loaded virtual sub-key. The raw token is never returned.
+      properties:
+        maskedId:
+          type: string
+        label:
+          type: string
+        allowedModels:
+          type: array
+          nullable: true
+          items:
+            type: string
+        expiresAt:
+          type: string
+          nullable: true
+        expired:
+          type: boolean
+        dailyRequestCap:
+          type: integer
+          nullable: true
+        dailyTokenCap:
+          type: integer
+          nullable: true
+        requestsInWindow:
+          type: integer
+        tokensInWindow:
+          type: integer
+        requestCapRemaining:
+          type: integer
+          nullable: true
+        tokenCapRemaining:
+          type: integer
+          nullable: true
+      required:
+        - maskedId
+        - label
+        - expired
+        - requestsInWindow
+        - tokensInWindow
+
+    VirtualKeysResponse:
+      type: object
+      properties:
+        softCapWarning:
+          type: string
+        count:
+          type: integer
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/VirtualKeySummary"
+      required: [softCapWarning, count, keys]
 
     RequestLogEntry:
       type: object

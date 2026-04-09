@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/generated/api.ts",
   "exports": {
-    ".": "./src/generated/api.ts"
+    ".": "./src/generated/api.ts",
+    "./schemas": "./src/generated/api.schemas.ts"
   },
   "peerDependencies": {
     "@tanstack/react-query": "*",

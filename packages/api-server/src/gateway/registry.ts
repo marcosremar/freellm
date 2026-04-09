@@ -7,6 +7,7 @@ import { NimProvider } from "./providers/nim.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
+import { PROVIDER_PRIVACY } from "./privacy.js";
 
 const EMPTY_USAGE: TokenUsageTotals = {
   promptTokens: 0,
@@ -94,6 +95,7 @@ export class ProviderRegistry {
     return this.providers.map((p) => {
       const stats = p.getStats();
       const keys = p.getKeysStatus();
+      const privacyEntry = PROVIDER_PRIVACY[p.id];
       return {
         id: p.id,
         name: p.name,
@@ -110,6 +112,13 @@ export class ProviderRegistry {
         keysAvailable: keys.filter((k) => !k.rateLimited).length,
         keys,
         usage: usageByProvider[p.id] ?? EMPTY_USAGE,
+        privacy: privacyEntry
+          ? {
+              policy: privacyEntry.policy,
+              sourceUrl: privacyEntry.source_url,
+              lastVerified: privacyEntry.last_verified,
+            }
+          : undefined,
       };
     });
   }
