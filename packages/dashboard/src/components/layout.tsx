@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Activity, Box, Terminal, X, Menu } from "lucide-react";
+import { Activity, Box, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHealthCheck, getHealthCheckQueryKey } from "@workspace/api-client-react";
 import { FreeLLMLogo } from "./logo";
@@ -13,7 +12,6 @@ const navItems = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: health, isLoading } = useHealthCheck({
     query: { refetchInterval: 10000, queryKey: getHealthCheckQueryKey() },
   });
@@ -21,171 +19,99 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const gatewayDot = isLoading
     ? "bg-muted"
     : health?.status === "ok"
-    ? "bg-primary shadow-[0_0_5px_hsl(150_100%_40%/0.8)]"
-    : "bg-destructive shadow-[0_0_5px_hsl(0_84%_60%/0.8)]";
+    ? "bg-primary shadow-[0_0_6px_hsl(158_50%_46%/0.6)]"
+    : "bg-destructive shadow-[0_0_6px_hsl(0_65%_55%/0.6)]";
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30 dark">
+    <div className="flex flex-col min-h-[100dvh] w-full bg-background text-foreground font-sans selection:bg-primary/30 dark overflow-x-hidden">
 
-      {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex w-60 border-r border-border bg-card/50 flex-col backdrop-blur-sm relative z-10 shrink-0">
-        {/* Logo */}
-        <div className="p-5 border-b border-border/40">
-          <div className="flex items-center gap-3">
-            <FreeLLMLogo size={32} />
-            <div>
-              <span className="font-mono font-bold tracking-tight text-base leading-none block">FreeLLM</span>
-              <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Gateway</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map((item) => {
-            const isActive = location === item.href;
-            return (
-              <Link key={item.href} href={item.href} className="block">
-                <div className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all cursor-pointer group",
-                  isActive
-                    ? "bg-primary/10 text-primary border border-primary/20"
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent"
-                )}>
-                  <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                  {item.label}
-                </div>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Gateway status */}
-        <div className="p-4 border-t border-border/40">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/30 text-xs font-mono">
-            <div className={cn("w-2 h-2 rounded-full shrink-0", gatewayDot)} />
-            <span className="text-muted-foreground">Gateway</span>
-            <span className="ml-auto uppercase text-[10px] tracking-widest">
-              {isLoading ? "..." : health?.status || "UNK"}
-            </span>
-          </div>
-        </div>
-      </aside>
-
-      {/* ── Mobile: slide-over menu ── */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          {/* Drawer */}
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-card border-r border-border flex flex-col">
-            <div className="p-5 border-b border-border/40 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FreeLLMLogo size={32} />
-                <div>
-                  <span className="font-mono font-bold tracking-tight text-base leading-none block">FreeLLM</span>
-                  <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Gateway</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* ── Desktop top navigation bar ── */}
+      <header className="hidden md:block border-b border-white/[0.06] bg-sidebar/80 backdrop-blur-md relative z-20 shrink-0">
+        <div className="max-w-7xl mx-auto px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-2.5">
+              <FreeLLMLogo size={26} />
+              <span className="font-mono font-bold tracking-tight text-sm leading-none">FreeLLM</span>
             </div>
 
-            <nav className="flex-1 px-3 py-4 space-y-0.5">
+            <nav className="flex items-center gap-1">
               {navItems.map((item) => {
                 const isActive = location === item.href;
                 return (
-                  <Link key={item.href} href={item.href} className="block" onClick={() => setMobileMenuOpen(false)}>
+                  <Link key={item.href} href={item.href}>
                     <div className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all cursor-pointer group",
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
                       isActive
-                        ? "bg-primary/10 text-primary border border-primary/20"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
                     )}>
-                      <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "")} />
+                      <item.icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-muted-foreground")} />
                       {item.label}
                     </div>
                   </Link>
                 );
               })}
             </nav>
+          </div>
 
-            <div className="p-4 border-t border-border/40">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary/30 text-xs font-mono">
-                <div className={cn("w-2 h-2 rounded-full shrink-0", gatewayDot)} />
-                <span className="text-muted-foreground">Gateway</span>
-                <span className="ml-auto uppercase text-[10px] tracking-widest">
-                  {isLoading ? "..." : health?.status || "UNK"}
-                </span>
-              </div>
-            </div>
-          </aside>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.04] text-xs font-mono">
+            <div className={cn("w-2 h-2 rounded-full shrink-0 transition-colors", gatewayDot)} />
+            <span className="text-muted-foreground">Gateway</span>
+            <span className="uppercase text-[10px] tracking-widest text-foreground/70">
+              {isLoading ? "..." : health?.status || "UNK"}
+            </span>
+          </div>
         </div>
-      )}
+      </header>
+
+      {/* ── Mobile top bar (logo + status only, no hamburger) ── */}
+      <header className="md:hidden sticky top-0 z-20 flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-sidebar/80 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <FreeLLMLogo size={24} />
+          <span className="font-mono font-bold tracking-tight text-sm">FreeLLM</span>
+        </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.04] text-xs font-mono">
+          <div className={cn("w-1.5 h-1.5 rounded-full", gatewayDot)} />
+          <span className="uppercase tracking-widest text-[10px] text-foreground/70">
+            {isLoading ? "..." : health?.status || "UNK"}
+          </span>
+        </div>
+      </header>
 
       {/* ── Main content area ── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
+      <div className="flex-1 relative min-w-0">
         {/* Grid background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-        <div className="absolute inset-0 bg-background/80 pointer-events-none" />
-
-        {/* Mobile top bar */}
-        <header className="md:hidden relative z-10 flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/60 backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-2.5">
-            <FreeLLMLogo size={28} />
-            <span className="font-mono font-bold tracking-tight text-base">FreeLLM</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
-              <div className={cn("w-1.5 h-1.5 rounded-full", gatewayDot)} />
-              <span className="uppercase tracking-widest text-[10px]">
-                {isLoading ? "..." : health?.status || "UNK"}
-              </span>
-            </div>
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
+        <div className="fixed inset-0 bg-[linear-gradient(to_right,#64748b06_1px,transparent_1px),linear-gradient(to_bottom,#64748b06_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+        <div className="fixed inset-0 bg-gradient-to-b from-background via-background to-background/95 pointer-events-none" />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto z-10 p-4 md:p-8 pb-20 md:pb-8">
-          <div className="max-w-6xl mx-auto">
+        <main className="relative z-10 p-4 md:px-8 md:py-8 pb-24 md:pb-8">
+          <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
-
-        {/* Mobile bottom tab bar */}
-        <nav className="md:hidden relative z-10 border-t border-border/50 bg-card/80 backdrop-blur-sm shrink-0">
-          <div className="flex">
-            {navItems.map((item) => {
-              const isActive = location === item.href;
-              return (
-                <Link key={item.href} href={item.href} className="flex-1">
-                  <div className={cn(
-                    "flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-[10px] font-mono tracking-wide">{item.label}</span>
-                    {isActive && <div className="absolute bottom-0 w-10 h-0.5 bg-primary rounded-t" />}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
       </div>
+
+      {/* ── Mobile bottom tab bar (sticky) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-white/[0.06] bg-sidebar/95 backdrop-blur-lg">
+        <div className="flex pb-[env(safe-area-inset-bottom)]">
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            return (
+              <Link key={item.href} href={item.href} className="flex-1">
+                <div className={cn(
+                  "flex flex-col items-center justify-center gap-1 py-2.5 transition-colors relative",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}>
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-[10px] font-mono tracking-wide">{item.label}</span>
+                  {isActive && <div className="absolute bottom-0 w-10 h-0.5 bg-primary rounded-t" />}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

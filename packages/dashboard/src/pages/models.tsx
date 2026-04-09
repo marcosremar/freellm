@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useListModels, getListModelsQueryKey } from "@workspace/api-client-react";
 import { Box, Copy, Check, Search } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -18,10 +17,10 @@ function CopyButton({ value }: { value: string }) {
   return (
     <button
       onClick={copy}
-      className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+      className="p-1.5 rounded-lg hover:bg-white/[0.06] text-muted-foreground hover:text-foreground transition-colors duration-150 cursor-pointer"
       title="Copy model ID"
     >
-      {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
+      {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
     </button>
   );
 }
@@ -54,7 +53,6 @@ export default function Models() {
       )
     : allModels;
 
-  // Group by gateway provider (not model creator/owned_by)
   const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, m) => {
     const p = m.provider ?? "unknown";
     if (!acc[p]) acc[p] = [];
@@ -76,25 +74,25 @@ export default function Models() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-mono font-bold tracking-tight flex items-center gap-3">
-            <Box className="w-7 h-7 text-muted-foreground" /> Models
+          <h1 className="text-2xl font-mono font-semibold tracking-tight flex items-center gap-3">
+            Models
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             All models available through the gateway, grouped by provider.
           </p>
         </div>
-        <Badge variant="outline" className="mt-1 font-mono text-xs border-primary/30 text-primary bg-primary/5">
+        <Badge variant="outline" className="mt-1 font-mono text-xs border-primary/15 text-primary bg-primary/5 rounded-lg">
           {allModels.length} total
         </Badge>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter models..."
-          className="pl-9 font-mono bg-card border-border/50 focus-visible:ring-primary/30"
+          className="pl-10 font-mono bg-card border-white/[0.06] rounded-xl focus-visible:ring-primary/20 h-11"
         />
       </div>
 
@@ -102,15 +100,15 @@ export default function Models() {
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse space-y-2">
-              <div className="h-5 w-24 bg-muted rounded" />
+              <div className="h-4 w-24 bg-muted rounded-lg" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {[1, 2, 3].map((j) => <div key={j} className="h-14 bg-card rounded-lg" />)}
+                {[1, 2, 3].map((j) => <div key={j} className="h-14 bg-card rounded-xl" />)}
               </div>
             </div>
           ))}
         </div>
       ) : sortedGroups.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground font-mono">
+        <div className="text-center py-20 text-muted-foreground font-mono text-sm">
           No models found.
         </div>
       ) : (
@@ -118,22 +116,22 @@ export default function Models() {
           {sortedGroups.map(([provider, providerModels]) => (
             <div key={provider}>
               <div className="flex items-center gap-3 mb-3">
-                <h2 className="text-sm font-mono font-semibold uppercase tracking-widest text-muted-foreground">
+                <h2 className="text-xs font-mono font-semibold uppercase tracking-widest text-muted-foreground">
                   {PROVIDER_LABELS[provider] ?? provider}
                 </h2>
-                <div className="flex-1 h-px bg-border/40" />
-                <span className="text-xs font-mono text-muted-foreground">{providerModels.length}</span>
+                <div className="flex-1 h-px bg-white/[0.04]" />
+                <span className="text-xs font-mono text-muted-foreground/60">{providerModels.length}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                 {providerModels.map((model) => (
-                  <Card
+                  <div
                     key={model.id}
                     className={cn(
-                      "group border-border/40 bg-card/50 hover:bg-card/80 transition-colors",
-                      provider === "freellm" && "border-primary/20 bg-primary/5 hover:bg-primary/10"
+                      "group rounded-xl border border-white/[0.04] bg-card hover:border-white/[0.08] transition-colors duration-150 cursor-pointer",
+                      provider === "freellm" && "border-primary/10 bg-primary/[0.03] hover:border-primary/20"
                     )}
                   >
-                    <CardContent className="p-3 flex items-center justify-between gap-2">
+                    <div className="p-3.5 flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p
                           className={cn(
@@ -144,13 +142,13 @@ export default function Models() {
                         >
                           {model.id}
                         </p>
-                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                        <p className="text-[11px] text-muted-foreground/60 font-mono mt-0.5">
                           {model.object}
                         </p>
                       </div>
                       <CopyButton value={model.id} />
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

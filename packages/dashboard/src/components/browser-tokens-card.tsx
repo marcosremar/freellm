@@ -27,17 +27,17 @@ export function BrowserTokensCard({ info }: BrowserTokensCardProps) {
   return (
     <Card
       className={cn(
-        "overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-colors duration-200",
+        "overflow-hidden border-white/[0.04] bg-card transition-colors duration-200 w-full lg:max-w-md",
       )}
     >
-      <CardHeader className="pb-3 border-b border-border/30">
+      <CardHeader className="pb-3 border-b border-white/[0.04]">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={cn(
                 "flex items-center justify-center w-9 h-9 rounded-md shrink-0 transition-colors duration-200",
                 info.enabled
-                  ? "bg-emerald-500/10 text-emerald-500"
+                  ? "bg-emerald-500/10 text-emerald-400"
                   : "bg-muted text-muted-foreground",
               )}
             >
@@ -55,8 +55,8 @@ export function BrowserTokensCard({ info }: BrowserTokensCardProps) {
             className={cn(
               "uppercase text-[10px] tracking-wider flex items-center gap-1 shrink-0",
               info.enabled
-                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                : "bg-muted text-muted-foreground border-border/50",
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/15"
+                : "bg-muted text-muted-foreground border-white/[0.06]",
             )}
           >
             <span
@@ -74,7 +74,7 @@ export function BrowserTokensCard({ info }: BrowserTokensCardProps) {
       </CardHeader>
       <CardContent className="p-4 pt-4 space-y-3">
         <div className="grid grid-cols-2 gap-2 text-sm font-mono">
-          <div className="flex flex-col p-2 bg-secondary/30 rounded-md border border-border/20">
+          <div className="flex flex-col p-2 bg-white/[0.02] rounded-lg border border-white/[0.04]">
             <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
               Max TTL
             </span>
@@ -82,7 +82,7 @@ export function BrowserTokensCard({ info }: BrowserTokensCardProps) {
               {Math.floor(info.maxTtlSeconds / 60)} min
             </span>
           </div>
-          <div className="flex flex-col p-2 bg-secondary/30 rounded-md border border-border/20">
+          <div className="flex flex-col p-2 bg-white/[0.02] rounded-lg border border-white/[0.04]">
             <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
               Min secret
             </span>
@@ -109,7 +109,7 @@ export function BrowserTokensCard({ info }: BrowserTokensCardProps) {
           rel="noopener noreferrer"
           className={cn(
             "group flex items-center justify-between px-3 py-2 rounded-md",
-            "border border-border/40 bg-secondary/20 hover:bg-secondary/40",
+            "border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04]",
             "text-xs font-mono text-muted-foreground hover:text-foreground",
             "transition-colors duration-200 cursor-pointer",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",

@@ -9,7 +9,7 @@ interface RoutingToggleProps {
 
 export function RoutingToggle({ strategy, onToggle, disabled }: RoutingToggleProps) {
   return (
-    <div className="flex items-center gap-3 bg-card border border-border px-3 py-2 rounded-md shadow-sm self-start sm:self-auto">
+    <div className="flex items-center gap-3 bg-card border border-white/[0.04] px-3.5 py-2.5 rounded-xl self-start sm:self-auto">
       <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
         <ArrowRightLeft className="w-4 h-4 shrink-0" />
         <span className="hidden sm:inline">Routing:</span>

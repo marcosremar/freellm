@@ -1,5 +1,4 @@
 import { Activity, CheckCircle2, XCircle, Coins, Database } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface MetricsRowProps {
   total: number;
@@ -25,73 +24,65 @@ export function MetricsRow({ total, success, failed, tokens, cacheHits, cacheHit
       value: total.toLocaleString(),
       sub: undefined,
       icon: Activity,
-      iconClass: "text-muted-foreground",
-      bgClass: "bg-secondary/50",
-      valueClass: "",
+      accent: "text-slate-400",
+      glow: "",
     },
     {
       label: "Success",
       value: success.toLocaleString(),
       sub: undefined,
       icon: CheckCircle2,
-      iconClass: "text-primary",
-      bgClass: "bg-primary/10",
-      valueClass: "text-primary",
+      accent: "text-primary",
+      glow: "shadow-[inset_0_1px_0_rgba(45,212,140,0.06)]",
     },
     {
       label: "Failed",
       value: failed.toLocaleString(),
       sub: undefined,
       icon: XCircle,
-      iconClass: "text-destructive",
-      bgClass: "bg-destructive/10",
-      valueClass: "text-destructive",
+      accent: "text-destructive",
+      glow: failed > 0 ? "shadow-[inset_0_1px_0_rgba(220,80,80,0.06)]" : "",
     },
     {
       label: "Cache Hits",
       value: formatCompact(cacheHits),
       sub: cacheHits > 0 ? `${(cacheHitRate * 100).toFixed(0)}% hit rate` : undefined,
       icon: Database,
-      iconClass: "text-cyan-400",
-      bgClass: "bg-cyan-400/10",
-      valueClass: "text-cyan-400",
+      accent: "text-cyan-400",
+      glow: "shadow-[inset_0_1px_0_rgba(34,211,238,0.06)]",
     },
     {
       label: "Tokens (24h)",
       value: formatCompact(tokens),
       sub: undefined,
       icon: Coins,
-      iconClass: "text-amber-500",
-      bgClass: "bg-amber-500/10",
-      valueClass: "text-amber-500",
+      accent: "text-amber-400",
+      glow: "shadow-[inset_0_1px_0_rgba(251,191,36,0.06)]",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
       {items.map((item) => (
-        <Card key={item.label} className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-3 md:p-5">
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
-              <div className={`hidden md:flex p-2.5 ${item.bgClass} rounded-md w-fit shrink-0`}>
-                <item.icon className={`w-4 h-4 ${item.iconClass}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted-foreground truncate">
-                  {item.label}
-                </p>
-                <p className={`text-xl md:text-2xl font-mono font-bold leading-tight ${item.valueClass}`}>
-                  {item.value}
-                </p>
-                {item.sub && (
-                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
-                    {item.sub}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div
+          key={item.label}
+          className={`rounded-xl border border-white/[0.04] bg-card p-4 ${item.glow} transition-colors duration-200 hover:border-white/[0.08]`}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <item.icon className={`w-4 h-4 ${item.accent} opacity-70`} />
+            <span className="text-xs font-medium text-muted-foreground tracking-wide">
+              {item.label}
+            </span>
+          </div>
+          <p className={`text-2xl font-mono font-semibold leading-none ${item.accent}`}>
+            {item.value}
+          </p>
+          {item.sub && (
+            <p className="text-[11px] font-mono text-muted-foreground mt-1.5">
+              {item.sub}
+            </p>
+          )}
+        </div>
       ))}
     </div>
   );

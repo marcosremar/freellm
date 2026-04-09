@@ -50,7 +50,7 @@ export default function Dashboard() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-mono font-bold tracking-tight">Gateway Status</h1>
+          <h1 className="text-2xl font-mono font-semibold tracking-tight">Gateway Status</h1>
           <p className="text-muted-foreground mt-1 text-sm">Real-time metrics and routing control.</p>
         </div>
         <RoutingToggle
@@ -70,10 +70,10 @@ export default function Dashboard() {
       />
 
       <div>
-        <h2 className="text-xl font-mono font-bold mb-4 flex items-center gap-2">
-          <Server className="w-5 h-5 text-muted-foreground" /> Providers
+        <h2 className="text-lg font-mono font-semibold mb-4 flex items-center gap-2 text-foreground">
+          <Server className="w-4 h-4 text-muted-foreground" /> Providers
         </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {status?.providers.map((provider) => (
             <ProviderCard
               key={provider.id}
@@ -89,7 +89,7 @@ export default function Dashboard() {
           large screens, stacked on mobile. Virtual keys renders nothing
           when no keys are loaded, so the browser-token card takes the
           full width in that case via the grid's auto-fill behaviour. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <div className="flex flex-col lg:flex-row gap-3 items-start">
         <VirtualKeysPanel />
         {status?.browserTokens && (
           <BrowserTokensCard info={status.browserTokens} />
