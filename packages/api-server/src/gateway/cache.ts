@@ -5,17 +5,27 @@ import type { ChatCompletionRequest, ChatCompletionResponse } from "./types.js";
  * In-memory LRU cache for OpenAI-compatible chat completions.
  *
  * Design:
- * - Exact-match keying via sha256(model, messages, temperature, max_tokens, top_p, stop)
- * - LRU eviction: re-insert on read keeps recently-used entries at the end of the Map
- * - TTL expiry per entry (Date.now() + ttlMs)
- * - Streaming responses are never cached (the protocol is incompatible)
- * - Errors are never cached (only successful responses)
+ * - Exact-match keying via sha256 of every field that can change the
+ *   response shape (model, messages, sampling params, tools,
+ *   tool_choice, response_format, reasoning_effort, seed, and so on).
+ *   Missing fields from the key used to cause cross-shape collisions
+ *   where a JSON-mode response could satisfy a plain-text request.
+ * - LRU eviction: re-insert on read keeps recently-used entries at the
+ *   end of the Map.
+ * - TTL expiry per entry (Date.now() + ttlMs).
+ * - Streaming responses are never cached (the protocol is incompatible).
+ * - Errors are never cached.
+ * - Truncated responses (finish_reason === "length") are never cached.
+ *   A single unlucky truncation should not poison every identical
+ *   request for a full hour. The caller is expected to raise
+ *   max_tokens or adjust reasoning_effort and try again.
  *
  * The whole thing lives in process memory because the rest of FreeLLM's
  * observability state (request log, rate limiter, circuit breaker, usage
- * tracker) is also in-memory. Restart resets everything together — consistent.
+ * tracker) is also in-memory. Restart resets everything together,
+ * consistent.
  *
- * Memory math: ~5-50KB per cached response × 1000 entries = ~5-50MB max.
+ * Memory math: ~5-50KB per cached response * 1000 entries = ~5-50MB max.
  * Configurable via CACHE_MAX_ENTRIES if needed.
  */
 
@@ -72,8 +82,12 @@ export class ResponseCache {
   }
 
   /**
-   * Build a cache key from the parameters that affect the response.
-   * Order-stable JSON keeps the hash deterministic across calls.
+   * Build a cache key from every parameter that can change the response
+   * shape. Order-stable JSON keeps the hash deterministic across calls
+   * (Node's JSON.stringify preserves string-key insertion order).
+   *
+   * Adding a new optional field to chatCompletionRequestSchema? Add it
+   * here too, or different request shapes will collide on the same key.
    */
   private buildKey(request: ChatCompletionRequest): string {
     const normalized = JSON.stringify({
@@ -81,8 +95,17 @@ export class ResponseCache {
       messages: request.messages,
       temperature: request.temperature ?? null,
       max_tokens: request.max_tokens ?? null,
+      max_completion_tokens: request.max_completion_tokens ?? null,
       top_p: request.top_p ?? null,
       stop: request.stop ?? null,
+      presence_penalty: request.presence_penalty ?? null,
+      frequency_penalty: request.frequency_penalty ?? null,
+      seed: request.seed ?? null,
+      tools: request.tools ?? null,
+      tool_choice: request.tool_choice ?? null,
+      parallel_tool_calls: request.parallel_tool_calls ?? null,
+      response_format: request.response_format ?? null,
+      reasoning_effort: request.reasoning_effort ?? null,
     });
     return createHash("sha256").update(normalized).digest("hex");
   }
@@ -130,8 +153,8 @@ export class ResponseCache {
   }
 
   /**
-   * Store a successful response. Skips streaming and disabled cache.
-   * Evicts the oldest entry if at capacity (LRU).
+   * Store a successful response. Skips streaming, disabled cache, and
+   * length-truncated responses. Evicts the oldest entry if at capacity (LRU).
    */
   set(
     request: ChatCompletionRequest,
@@ -142,6 +165,7 @@ export class ResponseCache {
   ): void {
     if (!this.enabled) return;
     if (request.stream) return;
+    if (!ResponseCache.isCacheable(response)) return;
 
     const key = this.buildKey(request);
 
@@ -169,6 +193,25 @@ export class ResponseCache {
   /** Clear all cached entries (admin reset). */
   clear(): void {
     this.store.clear();
+  }
+
+  /**
+   * Should this response land in the cache at all? Returns false for
+   * truncated responses (`finish_reason === "length"` on any choice),
+   * which otherwise would pin a bad answer for the whole TTL window.
+   * The caller is expected to raise max_tokens or reasoning_effort and
+   * retry rather than reuse the incomplete output.
+   *
+   * Errors, streaming, and empty responses are filtered by `set()` via
+   * the existing early-return paths so this helper only has to guard
+   * the length-truncation case.
+   */
+  static isCacheable(response: ChatCompletionResponse): boolean {
+    if (!response.choices || response.choices.length === 0) return false;
+    for (const choice of response.choices) {
+      if (choice.finish_reason === "length") return false;
+    }
+    return true;
   }
 
   /** Snapshot of cache statistics for /v1/status and the dashboard. */

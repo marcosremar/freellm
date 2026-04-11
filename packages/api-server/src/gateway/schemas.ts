@@ -73,6 +73,12 @@ export const chatCompletionRequestSchema = z.object({
       json_schema: z.record(z.any()).optional(),
     })
     .optional(),
+  // Reasoning budget knob for Gemini 2.5 OpenAI-compat and OpenAI o-series.
+  // Gemini defaults this to "high" which silently eats ~95% of max_tokens on
+  // internal thinking, leaving the caller with almost no visible output. The
+  // gemini provider adapter defaults this to "low" when the client did not
+  // supply one; clients that explicitly set it keep their value.
+  reasoning_effort: z.enum(["none", "low", "medium", "high"]).optional(),
   user: z.string().optional(),
 }).strict();
 

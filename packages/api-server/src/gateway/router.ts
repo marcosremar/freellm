@@ -9,6 +9,7 @@ import { assertStrictModeAllowed } from "./strict.js";
 import { parseRetryAfter } from "./retry-after.js";
 import { providerSatisfiesPrivacy, type PrivacyRequest } from "./privacy.js";
 import { freellmError } from "../errors/index.js";
+import { logger } from "../lib/logger.js";
 
 export type RouteReason = "direct" | "meta" | "cache" | "failover";
 
@@ -298,6 +299,25 @@ export class GatewayRouter {
         this.usageTracker.record(provider.id, promptTokens, completionTokens);
       }
 
+      // Surface finish_reason for observability. "length" means the
+      // response hit max_tokens and is probably incomplete; the cache
+      // layer already refuses to store those entries but we also log a
+      // warning so operators notice the pattern.
+      const finishReason = data.choices?.[0]?.finish_reason ?? undefined;
+      if (finishReason === "length") {
+        logger.warn(
+          {
+            provider: provider.id,
+            model: resolvedModel,
+            max_tokens: request.max_tokens,
+            max_completion_tokens: request.max_completion_tokens,
+            reasoning_effort: request.reasoning_effort,
+            completionTokens,
+          },
+          "upstream returned finish_reason=length, response is incomplete",
+        );
+      }
+
       this.requestLog.add({
         requestedModel: request.model,
         resolvedModel,
@@ -307,6 +327,7 @@ export class GatewayRouter {
         streaming: false,
         promptTokens: promptTokens || undefined,
         completionTokens: completionTokens || undefined,
+        finishReason,
       });
 
       // Store in cache for future identical requests.

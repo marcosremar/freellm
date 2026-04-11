@@ -239,6 +239,91 @@ describe("GatewayRouter.complete (non-strict)", () => {
   });
 });
 
+describe("GatewayRouter.complete finish_reason handling", () => {
+  function bodyWithFinish(finishReason: string) {
+    return {
+      id: "fr-test",
+      object: "chat.completion",
+      created: 0,
+      model: "m",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "truncated output" },
+          finish_reason: finishReason,
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 },
+    };
+  }
+
+  it("does NOT cache a finish_reason=length response (anti-poisoning)", async () => {
+    const groq = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      body: bodyWithFinish("length"),
+    });
+    const router = new GatewayRouter(fakeRegistry([groq]));
+
+    // First call -> upstream answered, finish_reason=length -> NOT cached
+    const first = await router.complete(baseRequest("m"));
+    expect(first.meta.cached).toBe(false);
+    expect(first.data.choices[0]?.finish_reason).toBe("length");
+    expect(groq.callCount).toBe(1);
+
+    // Second identical call -> should hit upstream again, not the cache
+    const second = await router.complete(baseRequest("m"));
+    expect(second.meta.cached).toBe(false);
+    expect(second.meta.reason).not.toBe("cache");
+    expect(groq.callCount).toBe(2);
+  });
+
+  it("DOES cache a finish_reason=stop response", async () => {
+    const groq = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      body: bodyWithFinish("stop"),
+    });
+    const router = new GatewayRouter(fakeRegistry([groq]));
+
+    await router.complete(baseRequest("m"));
+    const second = await router.complete(baseRequest("m"));
+
+    expect(second.meta.cached).toBe(true);
+    expect(second.meta.reason).toBe("cache");
+    // Upstream was only called once even though the router was called twice.
+    expect(groq.callCount).toBe(1);
+  });
+
+  it("surfaces finish_reason on the request log entry", async () => {
+    const groq = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      body: bodyWithFinish("length"),
+    });
+    const router = new GatewayRouter(fakeRegistry([groq]));
+
+    await router.complete(baseRequest("m"));
+
+    const recent = router.requestLog.getRecent(10);
+    expect(recent[0]).toBeDefined();
+    expect(recent[0]?.finishReason).toBe("length");
+  });
+
+  it("caches tool_calls finish_reason (it's a legitimate completion)", async () => {
+    const groq = new FakeProvider({
+      id: "groq",
+      models: ["m"],
+      body: bodyWithFinish("tool_calls"),
+    });
+    const router = new GatewayRouter(fakeRegistry([groq]));
+
+    await router.complete(baseRequest("m"));
+    const second = await router.complete(baseRequest("m"));
+    expect(second.meta.cached).toBe(true);
+  });
+});
+
 describe("GatewayRouter.complete (privacy=no-training)", () => {
   it("routes to a no-training provider and skips training ones", async () => {
     // gemini is tagged free-tier-trains in PROVIDER_PRIVACY; groq is no-training.

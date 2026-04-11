@@ -148,6 +148,24 @@ describe("chatCompletionRequestSchema", () => {
     });
   });
 
+  it("accepts reasoning_effort at every allowed level", () => {
+    for (const level of ["none", "low", "medium", "high"] as const) {
+      ok({
+        model: "gemini/gemini-2.5-flash",
+        messages: [{ role: "user", content: "think" }],
+        reasoning_effort: level,
+      });
+    }
+  });
+
+  it("rejects an unknown reasoning_effort value", () => {
+    rejects({
+      model: "free",
+      messages: [{ role: "user", content: "hi" }],
+      reasoning_effort: "maximal",
+    });
+  });
+
   it("accepts the developer role (used by newer OpenAI models)", () => {
     ok({
       model: "free",

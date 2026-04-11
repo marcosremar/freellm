@@ -60,6 +60,7 @@ export interface ChatCompletionRequest {
     type: "text" | "json_object" | "json_schema";
     json_schema?: Record<string, unknown>;
   };
+  reasoning_effort?: "none" | "low" | "medium" | "high";
   user?: string;
 }
 
@@ -116,6 +117,13 @@ export interface RequestLogEntry {
   promptTokens?: number;
   completionTokens?: number;
   cached?: boolean;
+  /**
+   * finish_reason from the upstream completion (non-streaming only).
+   * "stop" = natural completion, "length" = hit max_tokens,
+   * "tool_calls" = model chose to call a tool, "content_filter" =
+   * safety filter. Missing for streaming and cache-hit entries.
+   */
+  finishReason?: string | null;
 }
 
 export interface TokenUsageTotals {

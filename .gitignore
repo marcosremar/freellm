@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 .turbo/
 .pm/
+.omc/
