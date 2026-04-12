@@ -3,12 +3,12 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.5.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.5.1-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
 ![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-232%20passing-success?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-262%20passing-success?style=flat-square)
 
 ### You shouldn't need a credit card to call an LLM.
 
@@ -66,6 +66,8 @@ The request goes to the fastest available provider. If that one is rate-limited 
 - **Per-user rate limits.** Safely expose the gateway to your app's end users.
 - **Browser-safe tokens.** Short-lived HMAC-signed tokens for static sites, no auth backend needed.
 - **Streaming tool calls that work.** Gemini and Ollama streaming tool_call bugs normalized at the gateway.
+- **JSON mode across all providers.** `json_schema` works on NIM (translated to `guided_json` automatically), and truncated JSON responses carry a warning header so you don't discover the break at parse time.
+- **Gemini reasoning handled for you.** Gemini 2.5 models burn most of your output budget on internal thinking by default. FreeLLM sets the right `reasoning_effort` per model so your `max_tokens` actually buys you output.
 - **Zero cost.** Every provider runs on its free tier.
 
 ## Supported providers
@@ -306,6 +308,33 @@ Security model: max 15 minute TTL, origin-bound (browser Origin header verified 
 ### Streaming tool calls that actually work
 
 Gemini and Ollama both ship known bugs in their streaming tool_call output (Gemini drops the `index` field, Ollama flattens arguments outside the `function` wrapper). Every agent framework currently maintains its own workaround for these. FreeLLM fixes both at the gateway so the same stream works unchanged in the OpenAI SDK, Cline, Cursor, Aider, or anything else that expects OpenAI-spec SSE. Verified with real calls against live Gemini and reassembled by the real `openai` npm SDK.
+
+### Gemini 2.5 reasoning models
+
+Gemini 2.5 Flash and 2.5 Pro are reasoning models. Left to their own devices, they spend 90-98% of your `max_tokens` thinking internally before writing a single visible word. Ask for 1000 tokens of output and you'll get back 37.
+
+FreeLLM fixes this per model. For 2.5 Flash, thinking is disabled entirely (`reasoning_effort: "none"`) so your full budget goes to the actual answer. For 2.5 Pro (which refuses to run without some thinking), reasoning is set to `"low"` so it thinks briefly and gives you the rest.
+
+If you want the full reasoning power back, override it per request:
+
+```bash
+curl https://your-gateway/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini/gemini-2.5-flash",
+    "messages": [{"role": "user", "content": "Prove P != NP"}],
+    "max_tokens": 4000,
+    "reasoning_effort": "high"
+  }'
+```
+
+With `"high"` and a larger budget (4000+), the model gets room for both thinking and output. The point is: you choose the trade-off, not Google's default.
+
+### JSON mode across providers
+
+FreeLLM accepts `response_format: { type: "json_object" }` and `{ type: "json_schema", json_schema: { schema: {...} } }` and forwards them to the upstream provider. Most providers support this natively. For NVIDIA NIM, which uses a proprietary `guided_json` parameter instead, FreeLLM translates the standard format automatically so you don't have to special-case your code per provider.
+
+When a JSON-mode response hits `max_tokens` and the output is almost certainly broken (missing closing brackets, truncated strings), the response carries a `X-FreeLLM-Warning: json-possibly-truncated` header. You'll know the JSON is incomplete before you try to parse it.
 
 ### Securing your gateway
 

@@ -5,6 +5,127 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-04-12
+
+Fixes a user-reported bug where Gemini 2.5 Flash returned ~30 tokens
+regardless of how high max_tokens was set, hardens the response cache
+against poisoning by truncated responses, and adds JSON mode
+reliability improvements for NVIDIA NIM and all providers.
+
+### Fixed
+
+#### Gemini 2.5 reasoning budget no longer eats max_tokens
+
+Gemini 2.5 Flash and 2.5 Pro are reasoning models. With their default
+thinking budget they burned 90-98% of max_tokens on internal reasoning
+before producing visible text. A caller asking for max_tokens=1000
+routinely got back 30-40 tokens with finish_reason=length.
+
+The Gemini provider adapter now injects a per-model default
+`reasoning_effort` when the caller does not set one:
+
+- gemini-2.5-flash defaults to `"none"` (accepts zero thinking budget,
+  returns the full requested output)
+- gemini-2.5-pro defaults to `"low"` (the minimum Google accepts for
+  this model, which requires a non-zero thinking budget)
+
+Clients that want full reasoning can pass `reasoning_effort: "high"`
+explicitly. The adapter also normalizes the output budget onto
+`max_completion_tokens` only and deletes `max_tokens` from the
+outgoing request, because Gemini returns 400 when both are present.
+
+Verified against the live Gemini API: the same prompt that produced
+37 tokens before now returns 670+ tokens with finish_reason=stop.
+
+#### Deprecated Gemini 2.0 models removed from catalog
+
+gemini-2.0-flash and gemini-2.0-flash-lite both returned 404 "no
+longer available to new users" from the live API. Removed from the
+model list so callers cannot pick a dead model.
+
+#### Response cache no longer stores truncated responses
+
+When any choice in the upstream response carries
+finish_reason=length, the cache now refuses to store it. Previously
+a single truncated response from a reasoning model would pin the
+bad answer for the entire TTL window (default 1 hour), causing the
+"sometimes fails" pattern the user reported.
+
+#### Cache key expanded to prevent cross-shape collisions
+
+The cache key now includes tools, tool_choice, parallel_tool_calls,
+response_format, reasoning_effort, seed, max_completion_tokens,
+presence_penalty, and frequency_penalty. Previously two requests
+with the same prompt but different tool definitions or response
+formats would share a cache entry.
+
+### Added
+
+#### NVIDIA NIM json_schema translation
+
+NIM's OpenAI-compat endpoint does not support
+`response_format: { type: "json_schema" }`. It requires the schema
+in a vendor-specific `nvext.guided_json` field. The NIM provider
+adapter now translates the standard parameter into the NIM-native
+format automatically and removes the unsupported `response_format`
+field from the outgoing request. json_object mode and requests
+without response_format pass through untouched.
+
+#### JSON truncation warning header
+
+When a JSON-mode request (json_object or json_schema) hits
+max_tokens and the output is almost certainly broken mid-token,
+the response now carries:
+
+```
+X-FreeLLM-Warning: json-possibly-truncated
+```
+
+The caller knows immediately that the JSON is likely incomplete
+without needing to attempt a parse.
+
+#### reasoning_effort accepted in the request schema
+
+The Zod schema now accepts `reasoning_effort: "none" | "low" |
+"medium" | "high"` so clients can override the per-model default.
+Matches Gemini's OpenAI-compat knob and OpenAI's o-series
+reasoning parameter.
+
+#### finish_reason surfaced in the request log
+
+The request log entry now carries a `finishReason` field populated
+from the upstream response. When the reason is "length" the router
+also emits a pino warning tagged with provider, model, max_tokens,
+and reasoning_effort so operators can see which requests hit the
+token cap.
+
+### Configuration
+
+New environment variable:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `reasoning_effort` (request field) | Per-model | `"none"` for gemini-2.5-flash, `"low"` for gemini-2.5-pro. Clients can override per request. |
+
+### Tests
+
+262 passing across 22 files (up from 215 at v1.5.0):
+
+- `gemini-provider.test.ts` 14 tests for per-model defaults, mapRequest
+  normalization, and catalog verification
+- `cache.test.ts` 17 tests for isCacheable, truncation skip, and key
+  discrimination across all request shape fields
+- `nim-provider.test.ts` 6 tests for json_schema-to-nvext translation,
+  passthrough, and field preservation
+- `json-truncation.test.ts` 4 e2e tests for the warning header
+- `schema-tools.test.ts` 2 new tests for reasoning_effort
+- `router.test.ts` 4 new tests for finish_reason handling and
+  cache anti-poisoning
+
+[1.5.1]: https://github.com/Devansh-365/freellm/releases/tag/v1.5.1
+
+---
+
 ## [1.5.0] - 2026-04-09
 
 The browser-safe release. FreeLLM can now be safely exposed to an app's
