@@ -116,6 +116,15 @@ async function handleNonStreamingRequest(
       getVirtualKeyStore().recordRequest(virtualKey, tokens);
     }
 
+    // Warn callers when a JSON-mode response was likely truncated by max_tokens.
+    const fmt = body.response_format?.type;
+    if (
+      (fmt === "json_object" || fmt === "json_schema") &&
+      data.choices?.[0]?.finish_reason === "length"
+    ) {
+      res.setHeader("X-FreeLLM-Warning", "json-possibly-truncated");
+    }
+
     res.json(data);
   } catch (err) {
     next(err);
