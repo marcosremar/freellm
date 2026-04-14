@@ -122,7 +122,16 @@ describe("daysSinceVerified", () => {
 describe("PROVIDER_PRIVACY catalog coverage", () => {
   // The catalog must cover every provider id the gateway actually ships.
   // Update both the catalog and this list when adding a new provider.
-  const EXPECTED_IDS = ["groq", "gemini", "mistral", "cerebras", "nim", "ollama"];
+  const EXPECTED_IDS = [
+    "groq",
+    "gemini",
+    "mistral",
+    "cerebras",
+    "nim",
+    "cloudflare",
+    "github",
+    "ollama",
+  ];
 
   it("has an entry for every shipped provider id", () => {
     for (const id of EXPECTED_IDS) {
