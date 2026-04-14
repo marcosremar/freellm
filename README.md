@@ -12,11 +12,11 @@
 
 ### You shouldn't need a credit card to call an LLM.
 
-One endpoint. 6 providers. 25+ models. Zero dollars.
+One endpoint. 8 providers. 32+ models. Zero dollars.
 
 FreeLLM is an OpenAI-compatible gateway that routes across Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, Cloudflare Workers AI, GitHub Models, and Ollama. When one rate-limits, the next one answers. You stop seeing 429s.
 
-Stack 3 keys per provider and you get **~360 free requests per minute**. Including Llama 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1.
+Stack 3 keys per provider and you get **~450 free requests per minute**. Including Llama 3.3 70B, Gemini 2.5 Pro, GPT-4o-mini, and DeepSeek R1.
 
 Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
 
@@ -32,11 +32,11 @@ Drop-in for any OpenAI SDK. Swap the base URL. Keep your code.
 
 ## Why this exists
 
-Every major provider has a free tier. Groq, Gemini, Mistral, Cerebras, NVIDIA. All of them.
+Every major provider has a free tier. Groq, Gemini, Mistral, Cerebras, NVIDIA, Cloudflare, GitHub Models. All of them.
 
 But using them is painful.
 
-Each one ships its own SDK. Each one has its own rate limits. Each one goes down at the worst possible time. So you end up writing provider-switching logic, handling 429s, and babysitting API keys across five different dashboards.
+Each one ships its own SDK. Each one has its own rate limits. Each one goes down at the worst possible time. So you end up writing provider-switching logic, handling 429s, and babysitting API keys across a stack of provider dashboards.
 
 I built FreeLLM because I was tired of paying OpenAI $20 to test a prompt I'd run 30 times in an afternoon.
 
@@ -75,15 +75,17 @@ The request goes to the fastest available provider. If that one is rate-limited 
 | Provider | Models | Free tier (per key) |
 |----------|--------|---------------------|
 | **Groq** | Llama 3.3 70B, Llama 3.1 8B, Llama 4 Scout, Qwen3 32B | ~30 req/min |
-| **Gemini** | Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite | ~15 req/min |
+| **Gemini** | Gemini 2.5 Flash, 2.5 Pro | ~15 req/min |
 | **Mistral** | Mistral Small, Medium, Nemo | ~5 req/min |
 | **Cerebras** | Llama 3.1 8B, Qwen3 235B, GPT-OSS 120B | ~30 req/min |
 | **NVIDIA NIM** | Llama 3.3 70B, Llama 3.1 405B, Nemotron 70B, DeepSeek R1 | ~40 req/min |
+| **Cloudflare Workers AI** | Llama 3.3 70B fp8-fast, Llama 3.2 3B, Mistral Small 3.1, DeepSeek R1 Distill, Qwen2.5 Coder | ~20 req/min |
+| **GitHub Models** | GPT-4o-mini, GPT-4.1-mini, Llama 3.3 70B, Phi-4, Command R+, Mistral Large | ~15 req/min |
 | **Ollama** | Any local model | Unlimited |
 
-Baseline: ~120 req/min combined. With 3 keys per provider: **~360 req/min. All $0.**
+Baseline: ~150 req/min combined. With 3 keys per provider: **~450 req/min. All $0.**
 
-> Get free keys: [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com)
+> Get free keys: [Groq](https://console.groq.com), [Gemini](https://aistudio.google.com), [Mistral](https://console.mistral.ai), [Cerebras](https://cloud.cerebras.ai), [NVIDIA NIM](https://build.nvidia.com), [Cloudflare Workers AI](https://dash.cloudflare.com), [GitHub Models](https://github.com/settings/tokens)
 
 ## Quickstart
 
@@ -158,7 +160,7 @@ GROQ_API_KEY=gsk_key1,gsk_key2,gsk_key3,gsk_key4   # 4× the free RPM
 
 When one key hits its window, FreeLLM silently uses the next. A 429 on `key1` only sidelines that key, not the whole provider. Per-key state is exposed via `GET /v1/status`.
 
-Stack 3 keys across all 5 cloud providers and you get ~360 req/min of free inference. No other LLM gateway does this because they all assume you pay per token.
+Stack 3 keys across all 7 cloud providers and you get ~450 req/min of free inference. No other LLM gateway does this because they all assume you pay per token.
 
 ### Response caching
 
@@ -229,14 +231,16 @@ The response also carries an HTTP `Retry-After` header in seconds so any standar
 
 Not every free tier treats your prompts the same way. Send `X-FreeLLM-Privacy: no-training` and the router will only consider providers that contractually exclude free-tier data from training:
 
-| Provider   | Policy             |
-|------------|--------------------|
-| Groq       | no-training        |
-| Cerebras   | no-training        |
-| NVIDIA NIM | no-training        |
-| Ollama     | local              |
-| Mistral    | configurable       |
-| Gemini     | free-tier trains   |
+| Provider              | Policy             |
+|-----------------------|--------------------|
+| Groq                  | no-training        |
+| Cerebras              | no-training        |
+| NVIDIA NIM            | no-training        |
+| Cloudflare Workers AI | no-training        |
+| GitHub Models         | no-training        |
+| Ollama                | local              |
+| Mistral               | configurable       |
+| Gemini                | free-tier trains   |
 
 If no configured provider can satisfy the posture for the model you asked for, you get a clean 400 `model_not_supported` up front. Catalog entries carry source URLs and `last_verified` dates; the server warns at boot for any entry older than 90 days.
 
