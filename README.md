@@ -3,18 +3,18 @@
 # FreeLLM
 
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Version](https://img.shields.io/badge/version-v1.5.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-v1.5.2-blue?style=flat-square)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)
-![Providers](https://img.shields.io/badge/Providers-6-blueviolet?style=flat-square)
-![Models](https://img.shields.io/badge/Models-25+-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-262%20passing-success?style=flat-square)
+![Providers](https://img.shields.io/badge/Providers-8-blueviolet?style=flat-square)
+![Models](https://img.shields.io/badge/Models-32+-orange?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-286%20passing-success?style=flat-square)
 
 ### You shouldn't need a credit card to call an LLM.
 
 One endpoint. 6 providers. 25+ models. Zero dollars.
 
-FreeLLM is an OpenAI-compatible gateway that routes across Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, and Ollama. When one rate-limits, the next one answers. You stop seeing 429s.
+FreeLLM is an OpenAI-compatible gateway that routes across Groq, Gemini, Mistral, Cerebras, NVIDIA NIM, Cloudflare Workers AI, GitHub Models, and Ollama. When one rate-limits, the next one answers. You stop seeing 429s.
 
 Stack 3 keys per provider and you get **~360 free requests per minute**. Including Llama 3.3 70B, Gemini 2.5 Pro, and DeepSeek R1.
 
