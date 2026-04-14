@@ -5,6 +5,117 @@ All notable changes to FreeLLM are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-04-13
+
+Adds two new providers: Cloudflare Workers AI and GitHub Models. Both
+pass the `no-training` privacy filter, both support OpenAI Chat
+Completions natively, and both work with the existing multi-key
+rotation. No breaking changes.
+
+### Added
+
+#### Cloudflare Workers AI provider
+
+New `cloudflare` provider with six starter models: Llama 3.3 70B
+(fp8-fast variant), Llama 3.2 3B, Llama 3.1 8B, Mistral Small 3.1 24B,
+DeepSeek R1 Distill Qwen 32B, and Qwen 2.5 Coder 32B. All model ids
+retain their Cloudflare-native `@cf/...` prefix after the gateway
+strips its own `cloudflare/` slug.
+
+Two env vars required:
+
+```
+CLOUDFLARE_ACCOUNT_ID=abc123...
+CLOUDFLARE_API_KEY=comma,separated,tokens
+```
+
+The account id is part of the request URL, so the provider's `baseUrl`
+is a getter that reads it per-request. If either env var is missing,
+the provider is fully disabled and never fires against a broken URL.
+Rate limit seed: 20 RPM per key (conservative; Cloudflare itself rations
+by 10k Neurons/day and returns 429 which our normal cooldown honors).
+
+Privacy policy: `no-training`, sourced from
+`developers.cloudflare.com/workers-ai/privacy`.
+
+#### GitHub Models provider
+
+New `github` provider with seven starter models across tiers:
+
+- `github/openai/gpt-4o-mini`
+- `github/openai/gpt-4.1-mini`
+- `github/meta/Meta-Llama-3.3-70B-Instruct`
+- `github/meta/Llama-3.2-11B-Vision-Instruct`
+- `github/microsoft/Phi-4`
+- `github/cohere/Command-R-plus-08-2024`
+- `github/mistral-ai/Mistral-Large-2411`
+
+This is the first FreeLLM provider that ships OpenAI GPT-class models
+on a free tier.
+
+Single env var, distinct from the common `GITHUB_TOKEN` shell variable
+to avoid collisions:
+
+```
+GITHUB_MODELS_API_KEY=ghp_token1,ghp_token2
+```
+
+Works with classic PATs (no scope needed for public models) and
+fine-grained PATs (requires `Models: read` permission). Free tier is
+15 RPM / 150 RPD on low-tier models and 10 RPM / 50 RPD on high-tier
+(GPT-class). Rate limiter is set to 14 RPM per key; the daily cap is
+enforced by GitHub returning 429 which triggers the existing
+cooldown path.
+
+Privacy policy: `no-training`, sourced from
+`docs.github.com/en/github-models/responsible-use-of-github-models`.
+
+### Changed
+
+- `FAST_PRIORITY` and `SMART_PRIORITY` in `config.ts` now include
+  `cloudflare` and `github` in their rotation order. Meta-models
+  (`free`, `free-fast`, `free-smart`) transparently include the new
+  providers when their keys are configured.
+- Test env-cleanup loops in six e2e test files now delete
+  `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_KEY`, and
+  `GITHUB_MODELS_API_KEY` at boot so a developer running the suite
+  with those env vars set locally does not accidentally enable the
+  providers inside the test app.
+
+### Tests
+
+286 passing across 24 files (up from 262):
+
+- `cloudflare-provider.test.ts`: 11 tests covering the `baseUrl`
+  getter behavior, `getApiKeys()` requiring BOTH env vars, comma
+  parsing, `mapRequest` preservation of `@cf/...` paths, and the
+  six-model catalog shape.
+- `github-models-provider.test.ts`: 13 tests covering
+  `GITHUB_MODELS_API_KEY` parsing, a regression guard that confirms
+  we never read `GITHUB_TOKEN` or `GITHUB_API_KEY`, the fixed
+  `baseUrl`, `mapRequest` prefix stripping, and the seven-model
+  catalog shape.
+- `privacy.test.ts`: `EXPECTED_IDS` extended to assert both new
+  providers have privacy catalog entries.
+
+### Configuration
+
+New env vars documented in `.env.example`:
+
+| Variable | Required | What it does |
+|---|---|---|
+| `CLOUDFLARE_ACCOUNT_ID` | With key | Your Cloudflare account id. Part of the request URL. Provider disabled if missing. |
+| `CLOUDFLARE_API_KEY` | With account id | API token(s) with Workers AI: Read. Comma-separated for multi-key rotation. |
+| `GITHUB_MODELS_API_KEY` | Optional | GitHub PAT(s). Comma-separated for multi-key rotation. Distinct from `GITHUB_TOKEN` by design. |
+
+Verified at runtime: booted the gateway, hit `/v1/status`, both
+providers appear with `enabled: false` (no keys in test env), correct
+catalog sizes, and `no-training` policy stamped with `2026-04-13`.
+
+[1.5.2]: https://github.com/Devansh-365/freellm/releases/tag/v1.5.2
+
+---
+
 ## [1.5.1] - 2026-04-12
 
 Fixes a user-reported bug where Gemini 2.5 Flash returned ~30 tokens

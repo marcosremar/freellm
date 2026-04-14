@@ -27,6 +27,9 @@ beforeAll(async () => {
     "MISTRAL_API_KEY",
     "CEREBRAS_API_KEY",
     "NIM_API_KEY",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_KEY",
+    "GITHUB_MODELS_API_KEY",
   ]) {
     delete process.env[k];
   }

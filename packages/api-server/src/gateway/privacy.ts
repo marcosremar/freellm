@@ -76,6 +76,18 @@ export const PROVIDER_PRIVACY: Record<string, ProviderPrivacy> = {
     last_verified: "2026-04-09",
     note: "NVIDIA NIM service terms exclude training on customer inference data.",
   },
+  cloudflare: {
+    policy: "no-training",
+    source_url: "https://developers.cloudflare.com/workers-ai/privacy/",
+    last_verified: "2026-04-13",
+    note: "Cloudflare Workers AI privacy docs state inputs and outputs are not used for training.",
+  },
+  github: {
+    policy: "no-training",
+    source_url: "https://docs.github.com/en/github-models/responsible-use-of-github-models",
+    last_verified: "2026-04-13",
+    note: "GitHub Models responsible-use docs exclude prompts and completions from training.",
+  },
   ollama: {
     policy: "local",
     source_url: "https://github.com/ollama/ollama",

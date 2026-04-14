@@ -85,7 +85,16 @@ beforeAll(async () => {
   process.env["OLLAMA_MODELS"] = "llama3";
   // Master key stays unset so the virtual keys are the only auth source.
   delete process.env["FREELLM_API_KEY"];
-  for (const k of ["GROQ_API_KEY", "GEMINI_API_KEY", "MISTRAL_API_KEY", "CEREBRAS_API_KEY", "NIM_API_KEY"]) {
+  for (const k of [
+    "GROQ_API_KEY",
+    "GEMINI_API_KEY",
+    "MISTRAL_API_KEY",
+    "CEREBRAS_API_KEY",
+    "NIM_API_KEY",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_KEY",
+    "GITHUB_MODELS_API_KEY",
+  ]) {
     delete process.env[k];
   }
   // Generous identifier limit so these tests do not trip on their own IP bucket.

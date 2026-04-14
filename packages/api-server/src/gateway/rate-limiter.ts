@@ -6,12 +6,23 @@ export interface WindowConfig {
 // Conservative free-tier defaults per provider (kept below actual limits to avoid hard 429s).
 // These limits apply PER KEY when multiple API keys are configured for a provider.
 const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
-  groq:     { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
-  gemini:   { windowMs: 60_000, maxRequests: 13 },  // ~15 RPM free per key
-  mistral:  { windowMs: 60_000, maxRequests:  4 },  // ~5 RPM free per key
-  cerebras: { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
-  nim:      { windowMs: 60_000, maxRequests: 38 },  // ~40 RPM free per key
-  ollama:   { windowMs: 60_000, maxRequests: 999 }, // local — effectively unlimited
+  groq:       { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
+  gemini:     { windowMs: 60_000, maxRequests: 13 },  // ~15 RPM free per key
+  mistral:    { windowMs: 60_000, maxRequests:  4 },  // ~5 RPM free per key
+  cerebras:   { windowMs: 60_000, maxRequests: 28 },  // ~30 RPM free per key
+  nim:        { windowMs: 60_000, maxRequests: 38 },  // ~40 RPM free per key
+  // Cloudflare has no published RPM; it rations by Neurons per day
+  // (~10k/day). 20 RPM keeps us well under any realistic burst rate
+  // and lets CF's own limiter enforce the Neuron budget. On 429 we
+  // honor their Retry-After.
+  cloudflare: { windowMs: 60_000, maxRequests: 20 },
+  // GitHub Models: low-tier allows 15 RPM/150 RPD; high-tier 10/50.
+  // We pick 14 RPM (just below the low-tier cap). High-tier calls
+  // will hit GitHub's 429 slightly before our cap. The daily cap is
+  // NOT enforced locally; it's surfaced via GitHub's 429 with a
+  // cooldown. Heavy users should stack multiple PATs.
+  github:     { windowMs: 60_000, maxRequests: 14 },
+  ollama:     { windowMs: 60_000, maxRequests: 999 }, // local, effectively unlimited
 };
 
 const FALLBACK_CONFIG: WindowConfig = { windowMs: 60_000, maxRequests: 10 };
