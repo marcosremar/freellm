@@ -34,8 +34,14 @@ const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
   hyperbolic:  { windowMs: 60_000, maxRequests: 55 },  // ~60 RPM
   // DeepSeek: 5M free tokens, no published RPM hard limit
   deepseek:    { windowMs: 60_000, maxRequests: 55 },  // conservative
-  // Chutes.ai: ~200 req/day free beta
-  chutes:      { windowMs: 60_000, maxRequests: 8  },  // ~200/day = ~8/min safe
+  // xAI Grok: no published RPM; $25 free credits. Conservative estimate.
+  xai:         { windowMs: 60_000, maxRequests: 30 },
+  // HuggingFace Router: 1000 req per 5 min window = ~200 RPM effective
+  huggingface: { windowMs: 60_000, maxRequests: 55 },  // ~60 RPM conservative
+  // Cohere free tier: 20 RPM chat
+  cohere:      { windowMs: 60_000, maxRequests: 18 },  // ~20 RPM
+  // AI21: 200 RPM, 10 RPS on trial tier
+  ai21:        { windowMs: 60_000, maxRequests: 55 },  // 60 RPM conservative
   ollama:      { windowMs: 60_000, maxRequests: 999 }, // local, effectively unlimited
 };
 

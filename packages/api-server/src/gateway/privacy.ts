@@ -112,6 +112,30 @@ export const PROVIDER_PRIVACY: Record<string, ProviderPrivacy> = {
     last_verified: "2026-04-16",
     note: "Hyperbolic privacy policy states prompts and completions are not used to train models.",
   },
+  xai: {
+    policy: "free-tier-trains",
+    source_url: "https://x.ai/legal/privacy-policy",
+    last_verified: "2026-04-16",
+    note: "xAI data-sharing program uses interactions to train models. Standard tier policy TBD.",
+  },
+  huggingface: {
+    policy: "configurable",
+    source_url: "https://huggingface.co/privacy",
+    last_verified: "2026-04-16",
+    note: "HuggingFace Router forwards to upstream providers; training policy varies by routed provider.",
+  },
+  cohere: {
+    policy: "configurable",
+    source_url: "https://cohere.com/privacy",
+    last_verified: "2026-04-16",
+    note: "Cohere free trial key: data may be used for product improvement. Production keys can opt out.",
+  },
+  ai21: {
+    policy: "no-training",
+    source_url: "https://www.ai21.com/privacy",
+    last_verified: "2026-04-16",
+    note: "AI21 Labs privacy policy states user data is not used to train models.",
+  },
   ollama: {
     policy: "local",
     source_url: "https://github.com/ollama/ollama",

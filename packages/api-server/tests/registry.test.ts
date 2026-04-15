@@ -44,13 +44,14 @@ describe("ProviderRegistry — provider list", () => {
     const ids = registry.getAll().map(p => p.id);
     const expected = [
       "groq", "gemini", "mistral", "cerebras", "nim", "cloudflare",
-      "github", "openrouter", "sambanova", "together", "hyperbolic", "ollama",
+      "github", "openrouter", "sambanova", "together", "hyperbolic",
+      "xai", "huggingface", "cohere", "ai21", "ollama",
     ];
     for (const id of expected) expect(ids).toContain(id);
   });
 
-  it("has exactly 12 providers", () => {
-    expect(new ProviderRegistry().getAll()).toHaveLength(12);
+  it("has exactly 16 providers", () => {
+    expect(new ProviderRegistry().getAll()).toHaveLength(16);
   });
 
   it("getById returns provider for valid id", () => {
@@ -215,7 +216,7 @@ describe("ProviderRegistry — getStatusAll()", () => {
   it("returns a status entry for each provider", () => {
     const registry = new ProviderRegistry();
     const status = registry.getStatusAll();
-    expect(status).toHaveLength(12);
+    expect(status).toHaveLength(16);
     for (const s of status) {
       expect(s.id).toBeTruthy();
       expect(s.name).toBeTruthy();

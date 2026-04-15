@@ -10,6 +10,10 @@ import { OpenRouterProvider } from "./providers/openrouter.js";
 import { SambanovaProvider } from "./providers/sambanova.js";
 import { TogetherProvider } from "./providers/together.js";
 import { HyperbolicProvider } from "./providers/hyperbolic.js";
+import { XaiProvider } from "./providers/xai.js";
+import { HuggingFaceProvider } from "./providers/huggingface.js";
+import { CohereProvider } from "./providers/cohere.js";
+import { Ai21Provider } from "./providers/ai21.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
@@ -41,6 +45,10 @@ export class ProviderRegistry {
       new SambanovaProvider(),
       new TogetherProvider(),
       new HyperbolicProvider(),
+      new XaiProvider(),
+      new HuggingFaceProvider(),
+      new CohereProvider(),
+      new Ai21Provider(),
       new OllamaProvider(),
     ];
 
