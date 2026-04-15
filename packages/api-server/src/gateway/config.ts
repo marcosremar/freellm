@@ -4,6 +4,7 @@ export const FAST_PRIORITY = [
   "cerebras",
   "cloudflare",
   "gemini",
+  "hyperbolic",
   "together",
   "sambanova",
   "openrouter",
@@ -17,6 +18,7 @@ export const FAST_PRIORITY = [
 export const SMART_PRIORITY = [
   "gemini",
   "together",
+  "hyperbolic",
   "sambanova",
   "openrouter",
   "github",
@@ -43,7 +45,8 @@ export const DEFAULT_MODELS: Record<string, string> = {
   openrouter: "qwen/qwen3-coder:free",
   sambanova:  "Meta-Llama-3.3-70B-Instruct",
   together:   "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-ollama:     "llama3",
+  hyperbolic: "meta-llama/Llama-3.3-70B-Instruct",
+  ollama:     "llama3",
 };
 
 /** 4xx codes that should NOT trigger failover (client/config errors). */

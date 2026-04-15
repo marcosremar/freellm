@@ -25,6 +25,14 @@ export class TogetherProvider extends BaseProvider {
   }
 
   /**
+   * Together AI does not expose a public balance API.
+   * Check balance at: https://api.together.ai/settings/billing
+   */
+  async getBalance(): Promise<number | null> {
+    return null; // No public balance API available
+  }
+
+  /**
    * Together AI /v1/models returns each model with a `pricing` object.
    * Free models have pricing.input === 0 and pricing.output === 0.
    */

@@ -124,6 +124,49 @@ statusRouter.get("/virtual-keys", (_req, res) => {
   });
 });
 
+/** Known dashboard URLs for checking credits on paid providers. */
+const CREDIT_DASHBOARD_URLS: Record<string, string> = {
+  hyperbolic: "https://app.hyperbolic.ai/settings",
+  together:   "https://api.together.ai/settings/billing",
+  sambanova:  "https://cloud.sambanova.ai/apis",
+  nim:        "https://build.nvidia.com/",
+};
+
+/**
+ * GET /v1/status/credits — show credit status for paid/credit-based providers.
+ * Queries getBalance() when available; falls back to dashboard URL for providers
+ * without a public balance API. Free-tier-only providers are omitted.
+ */
+statusRouter.get("/credits", async (_req, res) => {
+  const providers = registry.getAll().filter(
+    (p) => p.isEnabled() && typeof p.getBalance === "function",
+  );
+
+  const results = await Promise.allSettled(
+    providers.map(async (p) => {
+      const balance = await p.getBalance!();
+      return {
+        id: p.id,
+        name: p.name,
+        balance,
+        balanceAvailable: balance !== null,
+        dashboardUrl: CREDIT_DASHBOARD_URLS[p.id] ?? null,
+      };
+    }),
+  );
+
+  const credits = results
+    .filter((r): r is PromiseFulfilledResult<ReturnType<typeof results[0] extends PromiseFulfilledResult<infer T> ? () => T : never>> =>
+      r.status === "fulfilled",
+    )
+    .map((r) => r.value);
+
+  res.json({
+    note: "Providers without a public balance API show balance: null. Use dashboardUrl to check manually.",
+    credits,
+  });
+});
+
 statusRouter.patch("/routing", validate(updateRoutingSchema), (req, res) => {
   const { strategy } = req.body as { strategy: RoutingStrategy };
 
