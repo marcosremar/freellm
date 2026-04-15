@@ -22,6 +22,10 @@ const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
   // NOT enforced locally; it's surfaced via GitHub's 429 with a
   // cooldown. Heavy users should stack multiple PATs.
   github:     { windowMs: 60_000, maxRequests: 14 },
+  // OpenRouter free tier: 20 RPM, 50 RPD. Very aggressive limits.
+  // Multiple keys help — each key gets its own 20 RPM quota.
+  // The daily cap (50) is enforced upstream; we handle via 429 cooldown.
+  openrouter: { windowMs: 60_000, maxRequests: 18 },  // ~20 RPM free per key
   ollama:     { windowMs: 60_000, maxRequests: 999 }, // local, effectively unlimited
 };
 
