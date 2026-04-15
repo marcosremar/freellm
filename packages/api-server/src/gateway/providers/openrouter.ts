@@ -47,9 +47,10 @@ export class OpenRouterProvider extends BaseProvider {
 
   /**
    * Discover free models dynamically from the OpenRouter API.
-   * Call this on startup or periodically to refresh the model list.
+   * Free models have pricing.prompt === "0" && pricing.completion === "0".
+   * Called on startup and periodically by the registry.
    */
-  async discoverFreeModels(): Promise<ModelObject[]> {
+  async discoverModels(): Promise<ModelObject[]> {
     const keys = this.getApiKeys();
     if (keys.length === 0) return this.models;
 

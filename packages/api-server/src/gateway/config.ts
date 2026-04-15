@@ -11,8 +11,6 @@ export const FAST_PRIORITY = [
   "nim",
   "github",
   "mistral",
-  "deepseek",
-  "chutes",
   "ollama",
 ] as const;
 
@@ -20,7 +18,6 @@ export const FAST_PRIORITY = [
 export const SMART_PRIORITY = [
   "gemini",
   "together",
-  "deepseek",
   "sambanova",
   "openrouter",
   "hyperbolic",
@@ -30,7 +27,6 @@ export const SMART_PRIORITY = [
   "cloudflare",
   "mistral",
   "cerebras",
-  "chutes",
   "ollama",
 ] as const;
 
@@ -50,8 +46,6 @@ export const DEFAULT_MODELS: Record<string, string> = {
   sambanova:  "Meta-Llama-3.3-70B-Instruct",
   together:   "meta-llama/Llama-3.3-70B-Instruct-Turbo",
   hyperbolic: "meta-llama/Llama-3.3-70B-Instruct",
-  deepseek:   "deepseek-chat",
-  chutes:     "deepseek-ai/DeepSeek-V3-0324",
   ollama:     "llama3",
 };
 

@@ -22,4 +22,11 @@ export interface ProviderAdapter {
   onRateLimit(response: Response, retryAfterSeconds?: number): void;
   onError(): void;
   resetCircuitBreaker(): void;
+
+  /**
+   * Optional: dynamically discover available (free) models from the provider API.
+   * Called on startup and periodically. Providers that implement this will have
+   * their model list updated automatically instead of relying on a static list.
+   */
+  discoverModels?(): Promise<ModelObject[]>;
 }

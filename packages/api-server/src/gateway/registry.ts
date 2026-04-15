@@ -10,12 +10,13 @@ import { OpenRouterProvider } from "./providers/openrouter.js";
 import { SambanovaProvider } from "./providers/sambanova.js";
 import { TogetherProvider } from "./providers/together.js";
 import { HyperbolicProvider } from "./providers/hyperbolic.js";
-import { DeepSeekProvider } from "./providers/deepseek.js";
-import { ChutesProvider } from "./providers/chutes.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
 import { PROVIDER_PRIVACY } from "./privacy.js";
+
+/** How often to refresh model lists from providers (24 hours). */
+const MODEL_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const EMPTY_USAGE: TokenUsageTotals = {
   promptTokens: 0,
@@ -40,16 +41,29 @@ export class ProviderRegistry {
       new SambanovaProvider(),
       new TogetherProvider(),
       new HyperbolicProvider(),
-      new DeepSeekProvider(),
-      new ChutesProvider(),
       new OllamaProvider(),
     ];
 
-    // Discover OpenRouter free models dynamically on startup
-    const openrouter = this.providers.find(p => p.id === 'openrouter') as OpenRouterProvider | undefined;
-    if (openrouter?.isEnabled()) {
-      void openrouter.discoverFreeModels();
-    }
+    // Run model discovery for all providers that support it
+    void this.runDiscovery();
+
+    // Refresh every 24h so model lists stay up-to-date
+    setInterval(() => void this.runDiscovery(), MODEL_REFRESH_INTERVAL_MS);
+  }
+
+  /**
+   * Calls discoverModels() on every enabled provider that supports it.
+   * Runs in parallel; failures in one provider don't block others.
+   */
+  private async runDiscovery(): Promise<void> {
+    const tasks = this.providers
+      .filter((p) => p.isEnabled() && typeof p.discoverModels === "function")
+      .map((p) =>
+        p.discoverModels!().catch((e) =>
+          console.error(`[${p.name}] discoverModels error: ${e}`),
+        ),
+      );
+    await Promise.allSettled(tasks);
   }
 
   getAll(): ProviderAdapter[] {
