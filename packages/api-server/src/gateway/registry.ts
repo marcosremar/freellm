@@ -7,6 +7,11 @@ import { NimProvider } from "./providers/nim.js";
 import { CloudflareProvider } from "./providers/cloudflare.js";
 import { GitHubModelsProvider } from "./providers/github-models.js";
 import { OpenRouterProvider } from "./providers/openrouter.js";
+import { SambanovaProvider } from "./providers/sambanova.js";
+import { TogetherProvider } from "./providers/together.js";
+import { HyperbolicProvider } from "./providers/hyperbolic.js";
+import { DeepSeekProvider } from "./providers/deepseek.js";
+import { ChutesProvider } from "./providers/chutes.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
@@ -32,6 +37,11 @@ export class ProviderRegistry {
       new CloudflareProvider(),
       new GitHubModelsProvider(),
       new OpenRouterProvider(),
+      new SambanovaProvider(),
+      new TogetherProvider(),
+      new HyperbolicProvider(),
+      new DeepSeekProvider(),
+      new ChutesProvider(),
       new OllamaProvider(),
     ];
 

@@ -25,8 +25,18 @@ const PROVIDER_WINDOW_CONFIGS: Record<string, WindowConfig> = {
   // OpenRouter free tier: 20 RPM, 50 RPD. Very aggressive limits.
   // Multiple keys help — each key gets its own 20 RPM quota.
   // The daily cap (50) is enforced upstream; we handle via 429 cooldown.
-  openrouter: { windowMs: 60_000, maxRequests: 18 },  // ~20 RPM free per key
-  ollama:     { windowMs: 60_000, maxRequests: 999 }, // local, effectively unlimited
+  openrouter:  { windowMs: 60_000, maxRequests: 18 },  // ~20 RPM free per key
+  // SambaNova: permanent free tier, 10–30 RPM depending on model
+  sambanova:   { windowMs: 60_000, maxRequests: 18 },  // ~20 RPM conservative
+  // Together AI: 60 RPM on free $25 credit tier
+  together:    { windowMs: 60_000, maxRequests: 55 },  // ~60 RPM
+  // Hyperbolic: 60 RPM free without deposit
+  hyperbolic:  { windowMs: 60_000, maxRequests: 55 },  // ~60 RPM
+  // DeepSeek: 5M free tokens, no published RPM hard limit
+  deepseek:    { windowMs: 60_000, maxRequests: 55 },  // conservative
+  // Chutes.ai: ~200 req/day free beta
+  chutes:      { windowMs: 60_000, maxRequests: 8  },  // ~200/day = ~8/min safe
+  ollama:      { windowMs: 60_000, maxRequests: 999 }, // local, effectively unlimited
 };
 
 const FALLBACK_CONFIG: WindowConfig = { windowMs: 60_000, maxRequests: 10 };
