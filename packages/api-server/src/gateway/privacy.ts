@@ -94,6 +94,24 @@ export const PROVIDER_PRIVACY: Record<string, ProviderPrivacy> = {
     last_verified: "2026-04-15",
     note: "OpenRouter routes to upstream providers; training policy depends on the underlying provider. Free models may train.",
   },
+  sambanova: {
+    policy: "no-training",
+    source_url: "https://sambanova.ai/privacy-policy",
+    last_verified: "2026-04-16",
+    note: "SambaNova privacy policy states user data is not used to train models.",
+  },
+  together: {
+    policy: "configurable",
+    source_url: "https://www.together.ai/privacy",
+    last_verified: "2026-04-16",
+    note: "Together AI privacy policy: free-tier data may be used for product improvement; paid customers can opt out.",
+  },
+  hyperbolic: {
+    policy: "no-training",
+    source_url: "https://hyperbolic.xyz/privacy-policy",
+    last_verified: "2026-04-16",
+    note: "Hyperbolic privacy policy states prompts and completions are not used to train models.",
+  },
   ollama: {
     policy: "local",
     source_url: "https://github.com/ollama/ollama",
