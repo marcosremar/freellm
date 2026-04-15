@@ -4,6 +4,7 @@ export const FAST_PRIORITY = [
   "cerebras",
   "cloudflare",
   "gemini",
+  "openrouter",
   "nim",
   "github",
   "mistral",
@@ -13,6 +14,7 @@ export const FAST_PRIORITY = [
 /** Provider IDs ordered by intelligence (most capable first). */
 export const SMART_PRIORITY = [
   "gemini",
+  "openrouter",
   "github",
   "nim",
   "groq",
@@ -34,6 +36,7 @@ export const DEFAULT_MODELS: Record<string, string> = {
   nim: "meta/llama-3.3-70b-instruct",
   cloudflare: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   github: "openai/gpt-4o-mini",
+  openrouter: "qwen/qwen3-coder:free",
   ollama: "llama3",
 };
 

@@ -88,6 +88,12 @@ export const PROVIDER_PRIVACY: Record<string, ProviderPrivacy> = {
     last_verified: "2026-04-13",
     note: "GitHub Models responsible-use docs exclude prompts and completions from training.",
   },
+  openrouter: {
+    policy: "configurable",
+    source_url: "https://openrouter.ai/privacy",
+    last_verified: "2026-04-15",
+    note: "OpenRouter routes to upstream providers; training policy depends on the underlying provider. Free models may train.",
+  },
   ollama: {
     policy: "local",
     source_url: "https://github.com/ollama/ollama",

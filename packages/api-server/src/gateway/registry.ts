@@ -6,6 +6,7 @@ import { OllamaProvider } from "./providers/ollama.js";
 import { NimProvider } from "./providers/nim.js";
 import { CloudflareProvider } from "./providers/cloudflare.js";
 import { GitHubModelsProvider } from "./providers/github-models.js";
+import { OpenRouterProvider } from "./providers/openrouter.js";
 import type { ProviderAdapter } from "./providers/types.js";
 import type { ModelObject, ProviderStatusInfo, RoutingStrategy, TokenUsageTotals } from "./types.js";
 import { FAST_PRIORITY, SMART_PRIORITY } from "./config.js";
@@ -30,8 +31,15 @@ export class ProviderRegistry {
       new NimProvider(),
       new CloudflareProvider(),
       new GitHubModelsProvider(),
+      new OpenRouterProvider(),
       new OllamaProvider(),
     ];
+
+    // Discover OpenRouter free models dynamically on startup
+    const openrouter = this.providers.find(p => p.id === 'openrouter') as OpenRouterProvider | undefined;
+    if (openrouter?.isEnabled()) {
+      void openrouter.discoverFreeModels();
+    }
   }
 
   getAll(): ProviderAdapter[] {
