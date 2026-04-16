@@ -24,6 +24,9 @@ export abstract class BaseProvider implements ProviderAdapter {
   abstract readonly baseUrl: string;
   abstract readonly models: ModelObject[];
 
+  /** Per-request timeout in ms. Override in subclass for slow providers. Default: 8000. */
+  protected readonly perRequestTimeoutMs: number = 8_000;
+
   protected circuitBreaker = new CircuitBreaker();
   protected rateLimiter = new RateLimiter();
   protected stats: ProviderStats = {
@@ -136,15 +139,35 @@ export abstract class BaseProvider implements ProviderAdapter {
 
     const mapped = this.mapRequest(request);
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${picked.key}`,
-        ...this.extraHeaders(),
-      },
-      body: JSON.stringify(mapped),
-    });
+    // Per-provider timeout — fail fast so the router can failover quickly.
+    // Default 8 s; providers can override via perRequestTimeoutMs.
+    const timeoutMs = this.perRequestTimeoutMs ?? 8_000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${picked.key}`,
+          ...this.extraHeaders(),
+        },
+        body: JSON.stringify(mapped),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      // Treat timeout (AbortError) as a transient 503 so the router circuit-breaks
+      // and fails over to the next provider without surfacing the abort to the client.
+      if (err instanceof Error && err.name === "AbortError") {
+        this.onError();
+        throw new Error(`Provider ${this.name} timed out after ${timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
 
     // Remember which key produced this Response so onSuccess/onRateLimit
     // can attribute the result correctly under concurrency.
