@@ -62,16 +62,16 @@ describe("TogetherProvider — discoverModels()", () => {
     expect(result).toEqual(fallback);
   });
 
-  it("filters to only free chat models (pricing.input=0, type='chat')", async () => {
+  it("filters to production chat models (pricing > 0, type='chat'), excludes experimental (pricing=0)", async () => {
     process.env["TOGETHER_API_KEY"] = "key_test";
     const p = new TogetherProvider();
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: async () => ([
-        { id: "meta-llama/Llama-3.3-70B-Instruct-Turbo", type: "chat", pricing: { input: 0, output: 0 }, organization: "meta" },
-        { id: "meta-llama/Llama-3.1-8B-Instruct-Turbo", type: "chat", pricing: { input: 0, output: 0 }, organization: "meta" },
-        { id: "together/paid-model", type: "chat", pricing: { input: 0.5, output: 1.0 } },  // paid
-        { id: "together/embed-model", type: "embedding", pricing: { input: 0, output: 0 } }, // not chat
+        { id: "meta-llama/Llama-3.3-70B-Instruct-Turbo", type: "chat", pricing: { input: 0.88, output: 0.88 }, organization: "meta" },
+        { id: "Qwen/Qwen2.5-72B-Instruct-Turbo", type: "chat", pricing: { input: 1.2, output: 1.2 }, organization: "Qwen" },
+        { id: "Qwen/Qwen3-Coder-30B-A3B", type: "chat", pricing: { input: 0, output: 0 } },   // experimental — excluded
+        { id: "embed-model", type: "embedding", pricing: { input: 0.5, output: 0 } },           // not chat — excluded
       ]),
     } as Response);
 
@@ -80,14 +80,14 @@ describe("TogetherProvider — discoverModels()", () => {
     expect(result.every(m => m.id.startsWith("together/"))).toBe(true);
   });
 
-  it("keeps fallback if API returns no free models", async () => {
+  it("keeps fallback if API returns only experimental models (pricing=0)", async () => {
     process.env["TOGETHER_API_KEY"] = "key_test";
     const p = new TogetherProvider();
     const fallback = [...p.models];
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       json: async () => ([
-        { id: "expensive-model", type: "chat", pricing: { input: 5.0, output: 10.0 } },
+        { id: "experimental-model", type: "chat", pricing: { input: 0, output: 0 } },
       ]),
     } as Response);
     const result = await p.discoverModels!();

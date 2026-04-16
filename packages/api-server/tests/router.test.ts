@@ -413,3 +413,89 @@ describe("GatewayRouter.complete (strict mode)", () => {
     expect(groq.callCount).toBe(2);
   });
 });
+
+// ─── 429 failover behaviour ───────────────────────────────────────────────────
+
+describe("GatewayRouter.complete — 429 failover", () => {
+  it("fails over to next provider when first returns 429 (non-strict)", async () => {
+    const primary = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [429] });
+    const backup  = new FakeProvider({ id: "gemini",    models: ["m"] });
+    const router  = new GatewayRouter(fakeRegistry([primary, backup]));
+
+    const { meta } = await router.complete(baseRequest("m"));
+    expect(meta.provider).toBe("gemini");
+    expect(meta.reason).toBe("failover");
+    expect(primary.callCount).toBe(1);
+    expect(backup.callCount).toBe(1);
+  });
+
+  it("marks primary as rate-limited after 429 so it is excluded from retry", async () => {
+    const primary = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [429] });
+    const backup  = new FakeProvider({ id: "gemini",    models: ["m"] });
+    const router  = new GatewayRouter(fakeRegistry([primary, backup]));
+
+    await router.complete(baseRequest("m"));
+    // primary should now be unavailable (rate-limited)
+    expect(primary.isAvailable()).toBe(false);
+  });
+
+  it("throws AllProvidersExhaustedError when ALL providers return 429", async () => {
+    const a = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [429] });
+    const b = new FakeProvider({ id: "gemini",    models: ["m"], statuses: [429] });
+    const c = new FakeProvider({ id: "mistral",   models: ["m"], statuses: [429] });
+    const router = new GatewayRouter(fakeRegistry([a, b, c]));
+
+    await expect(router.complete(baseRequest("m"))).rejects.toBeInstanceOf(
+      AllProvidersExhaustedError,
+    );
+    expect(a.callCount).toBe(1);
+    expect(b.callCount).toBe(1);
+    expect(c.callCount).toBe(1);
+  });
+
+  it("uses 60s default cooldown when 429 has no Retry-After header", async () => {
+    const primary = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [429] });
+    const backup  = new FakeProvider({ id: "gemini",    models: ["m"] });
+    const router  = new GatewayRouter(fakeRegistry([primary, backup]));
+
+    await router.complete(baseRequest("m"));
+    // No Retry-After header → retryAfterSeconds should be undefined
+    // (provider uses its own default cooldown internally)
+    expect(primary.lastRetryAfterSeconds).toBeUndefined();
+  });
+
+  it("fails over after 500 then succeeds on third provider", async () => {
+    const a = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [500] });
+    const b = new FakeProvider({ id: "gemini",    models: ["m"], statuses: [429] });
+    const c = new FakeProvider({ id: "mistral",   models: ["m"] });
+    const router = new GatewayRouter(fakeRegistry([a, b, c]));
+
+    const { meta } = await router.complete(baseRequest("m"));
+    expect(meta.provider).toBe("mistral");
+    expect(meta.reason).toBe("failover");
+    // attempted tracks providers that were selected and called
+    expect(meta.attempted).toContain("sambanova");
+    expect(meta.attempted).toContain("mistral");
+    expect(a.callCount).toBe(1);
+    expect(b.callCount + c.callCount).toBeGreaterThanOrEqual(1); // at least one of b/c was tried
+    expect(c.callCount).toBe(1); // mistral succeeded
+  });
+
+  it("non-retriable 4xx (401) does NOT failover — throws ProviderClientError immediately", async () => {
+    const primary = new FakeProvider({ id: "sambanova", models: ["m"], statuses: [401] });
+    const backup  = new FakeProvider({ id: "gemini",    models: ["m"] });
+    const router  = new GatewayRouter(fakeRegistry([primary, backup]));
+
+    await expect(router.complete(baseRequest("m"))).rejects.toBeInstanceOf(ProviderClientError);
+    expect(backup.callCount).toBe(0); // backup never tried
+  });
+
+  it("non-retriable 403 does NOT failover", async () => {
+    const primary = new FakeProvider({ id: "xai",    models: ["m"], statuses: [403] });
+    const backup  = new FakeProvider({ id: "gemini", models: ["m"] });
+    const router  = new GatewayRouter(fakeRegistry([primary, backup]));
+
+    await expect(router.complete(baseRequest("m"))).rejects.toBeInstanceOf(ProviderClientError);
+    expect(backup.callCount).toBe(0);
+  });
+});
