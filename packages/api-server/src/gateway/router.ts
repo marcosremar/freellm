@@ -163,6 +163,25 @@ export class GatewayRouter {
       const provider = this.pickProvider(request.model, excluded, privacy);
 
       if (!provider) {
+        // Before giving up, wait up to 2 seconds for a local sliding window to
+        // clear — this avoids false "all exhausted" when requests arrive in a
+        // tight burst that fills all per-minute windows simultaneously.
+        const windowClearMs = 2_000;
+        if (Date.now() + windowClearMs < deadline) {
+          await new Promise(r => setTimeout(r, windowClearMs));
+          const retryProvider = this.pickProvider(request.model, excluded, privacy);
+          if (retryProvider) {
+            // A window cleared — continue with this provider
+            if (!attempted.includes(retryProvider.id)) attempted.push(retryProvider.id);
+            const resolvedModel = this.resolveModelForProvider(request.model, retryProvider);
+            const mappedRequest = { ...request, model: resolvedModel };
+            const response = await retryProvider.complete(mappedRequest);
+            if (response.ok) {
+              retryProvider.onSuccess(response);
+              return { response, provider: retryProvider, resolvedModel, attempted, failoverCount };
+            }
+          }
+        }
         throw new AllProvidersExhaustedError(
           `All providers exhausted for model: ${request.model}`,
           [...excluded],
@@ -178,7 +197,28 @@ export class GatewayRouter {
         const response = await provider.complete(mappedRequest);
 
         if (response.status === 429) {
-          const retryAfterMs = parseRetryAfter(response.headers.get("retry-after"));
+          let retryAfterMs = parseRetryAfter(response.headers.get("retry-after"));
+
+          // Detect long-term quota exhaustion (daily/weekly/monthly) from body.
+          // Providers like SambaNova embed a reset datetime in the error message
+          // but don't set a Retry-After header. Without this, the router would
+          // retry every 60 s in a tight cycle, wasting all failover attempts.
+          if (retryAfterMs == null) {
+            try {
+              const body = await response.clone().json() as { error?: { message?: string } };
+              const msg = body?.error?.message ?? "";
+              // Look for an ISO-ish datetime hint: "resets at 2026-04-17 00:03:41"
+              const dateMatch = msg.match(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/);
+              if (dateMatch) {
+                const resetMs = new Date(dateMatch[1]).getTime() - Date.now();
+                if (resetMs > 0) retryAfterMs = Math.min(resetMs, 24 * 60 * 60 * 1000);
+              } else if (/weekly|monthly|quota|每周|每月|semana|mês/.test(msg)) {
+                // Generic long-term quota exhaustion — cool down for 1 hour
+                retryAfterMs = 60 * 60 * 1000;
+              }
+            } catch { /* ignore body parse errors */ }
+          }
+
           // onRateLimit takes seconds (the provider API contract). Pass the
           // clamped value so absurd upstream hints can't lock a key out.
           provider.onRateLimit(
