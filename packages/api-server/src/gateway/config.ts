@@ -61,8 +61,11 @@ export const DEFAULT_MODELS: Record<string, string> = {
   ollama:       "llama3",
 };
 
-/** 4xx codes that should NOT trigger failover (client/config errors). */
-export const NON_RETRIABLE_STATUSES = new Set([400, 401, 403, 404]);
+/** 4xx codes that should NOT trigger failover (auth/permission errors).
+ *  NOTE: 400 is intentionally excluded — providers may reject requests for
+ *  provider-specific reasons (unsupported params, model quirks) that another
+ *  provider would handle fine. Treat 400 as retriable to allow failover. */
+export const NON_RETRIABLE_STATUSES = new Set([401, 403]);
 
 /** Meta-model entries returned by GET /v1/models. */
 export const META_MODEL_ENTRIES = [
