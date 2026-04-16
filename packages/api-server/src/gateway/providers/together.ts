@@ -54,12 +54,15 @@ export class TogetherProvider extends BaseProvider {
         type?: string;
       }>;
 
+      // Together AI gives $25 credits on signup. Use production models (pricing > 0)
+      // which are reliably available serverless. Models with pricing=0 are experimental
+      // and often fail with "non-serverless" errors.
       const freeModels: ModelObject[] = data
         .filter(
           (m) =>
             m.type === "chat" &&
-            m.pricing?.input === 0 &&
-            m.pricing?.output === 0,
+            (m.pricing?.input ?? 0) > 0 &&
+            (m.pricing?.output ?? 0) > 0,
         )
         .map((m) => ({
           id: `together/${m.id}`,
@@ -71,9 +74,9 @@ export class TogetherProvider extends BaseProvider {
 
       if (freeModels.length > 0) {
         this.models = freeModels;
-        console.log(`[Together AI] Discovered ${freeModels.length} free models`);
+        console.log(`[Together AI] Discovered ${freeModels.length} models (uses $25 credits)`);
       } else {
-        console.warn(`[Together AI] No free models found — keeping fallback list`);
+        console.warn(`[Together AI] No models found — keeping fallback list`);
       }
 
       return this.models;
